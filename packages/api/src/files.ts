@@ -8,14 +8,17 @@ export function planParts(size: number): { partSize: number; partCount: number }
 }
 
 /**
- * Neutralises path separators and control characters in a client-supplied file name.
- * Storage keys never contain names, so this only protects what recipients' browsers see.
+ * Neutralises path separators in a client-supplied file name and removes control and invisible
+ * formatting characters (e.g. a right-to-left override that disguises the extension) as well as
+ * trailing dots and spaces, which Windows drops when saving. Storage keys never contain names, so
+ * this protects what recipients' browsers see and what the blocked-file-type policy checks.
  */
 export function sanitizeFileName(name: string): string {
   const cleaned = name
     .normalize('NFC')
     .replace(/[\\/]/g, '_')
-    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/[\p{Cc}\p{Cf}]/gu, '')
+    .replace(/[\s.]+$/u, '')
     .trim();
   return cleaned.length > 0 ? cleaned.slice(0, 255) : 'file';
 }

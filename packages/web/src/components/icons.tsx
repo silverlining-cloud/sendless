@@ -45,4 +45,7 @@ export const EyeIcon = make(['M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z',
 export const ShieldIcon = make(['M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6z'], 'ShieldIcon');
 export const PlusIcon = make(['M12 5v14', 'M5 12h14'], 'PlusIcon');
 export const ArrowLeftIcon = make(['M19 12H5', 'M11 6l-6 6 6 6'], 'ArrowLeftIcon');
+export const SunIcon = make(['M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z', 'M12 2v2', 'M12 20v2', 'M4.93 4.93l1.41 1.41', 'M17.66 17.66l1.41 1.41', 'M2 12h2', 'M20 12h2', 'M4.93 19.07l1.41-1.41', 'M17.66 6.34l1.41-1.41'], 'SunIcon');
+export const MoonIcon = make(['M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'], 'MoonIcon');
+export const MonitorIcon = make(['M3 4h18v12H3z', 'M8 20h8', 'M12 16v4'], 'MonitorIcon');
 export const GlobeIcon = make(['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M3 12h18', 'M12 3a14 14 0 0 1 0 18', 'M12 3a14 14 0 0 0 0 18'], 'GlobeIcon');

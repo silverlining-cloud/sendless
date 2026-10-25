@@ -35,8 +35,10 @@ export interface TransferRecord {
   maxOpens: number | null;
   opens: number;
   passwordHash: string | null;
-  failedUnlocks: number;
-  lockedUntil: number;
+  /** Password attempts claimed in the current window (see `Store.claimUnlockAttempt`). */
+  unlockAttempts: number;
+  /** When the current password-attempt window ends; 0 before the first attempt. */
+  unlockWindowEnds: number;
   status: TransferStatus;
   uploadToken: string;
   files: Record<string, StoredFile>;
@@ -58,8 +60,10 @@ export interface RequestRecord {
   createdAt: number;
   expiresAt: number;
   passwordHash: string | null;
-  failedUnlocks: number;
-  lockedUntil: number;
+  /** Password attempts claimed in the current window (see `Store.claimUnlockAttempt`). */
+  unlockAttempts: number;
+  /** When the current password-attempt window ends; 0 before the first attempt. */
+  unlockWindowEnds: number;
   maxSubmissions: number | null;
   submissions: number;
   maxBytesPerSubmission: number | null;

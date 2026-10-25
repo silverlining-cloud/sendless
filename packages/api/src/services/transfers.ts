@@ -51,7 +51,7 @@ interface NewTransfer {
   submitter: Submitter | null;
 }
 
-async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+export async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let next = 0;
   const worker = async () => {
@@ -101,8 +101,8 @@ export async function startTransfer(deps: Deps, input: NewTransfer): Promise<{ r
     maxOpens: input.maxOpens,
     opens: 0,
     passwordHash: input.password ? await hashPassword(input.password) : null,
-    failedUnlocks: 0,
-    lockedUntil: 0,
+    unlockAttempts: 0,
+    unlockWindowEnds: 0,
     status: 'uploading',
     uploadToken: randomId(24),
     files: Object.fromEntries(files.map((f) => [f.id, f])),
@@ -423,31 +423,33 @@ export async function getPublicTransfer(deps: Deps, id: string): Promise<PublicT
   };
 }
 
-/** Checks a link password with lockout. Shared by transfers and file requests. */
+/**
+ * Checks a link password with lockout. Shared by transfers and file requests. Each attempt is claimed
+ * before the hash is checked, so parallel guesses get no more than MAX_FAILED_UNLOCKS tries per window.
+ */
 export async function checkLinkPassword(
   deps: Deps,
   kind: 'transfer' | 'request',
-  record: { id: string; passwordHash: string | null; failedUnlocks: number; lockedUntil: number },
+  record: { id: string; passwordHash: string | null },
   password: string | undefined,
   req: HttpRequest,
 ): Promise<void> {
-  const now = deps.now();
-  if (record.lockedUntil > now) {
+  if (!record.passwordHash) return;
+  if (!password) throw new HttpError(401, 'wrong_password', 'Password required');
+  if (!(await deps.store.claimUnlockAttempt(kind, record.id, deps.now(), MAX_FAILED_UNLOCKS, LOCKOUT_SECONDS))) {
     throw new HttpError(429, 'locked', 'Too many wrong passwords. Please try again later.');
   }
-  if (!record.passwordHash) return;
-  if (password && (await verifyPassword(password, record.passwordHash))) {
-    if (record.failedUnlocks > 0) await deps.store.clearFailedUnlocks(kind, record.id);
+  if (await verifyPassword(password, record.passwordHash)) {
+    await deps.store.clearUnlockAttempts(kind, record.id);
     return;
   }
-  await deps.store.recordFailedUnlock(kind, record.id, now, MAX_FAILED_UNLOCKS, LOCKOUT_SECONDS);
   await recordEvent(deps, {
     subject: kind === 'transfer' ? transferSubject(record.id) : requestSubject(record.id),
     action: `${kind}.password_failed`,
     actor: RECIPIENT,
     req,
   });
-  throw new HttpError(401, 'wrong_password', password ? 'Wrong password' : 'Password required');
+  throw new HttpError(401, 'wrong_password', 'Wrong password');
 }
 
 export async function unlockTransfer(deps: Deps, id: string, password: string | undefined, req: HttpRequest): Promise<UnlockResult> {

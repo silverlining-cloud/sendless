@@ -22,7 +22,7 @@ No servers to run, nothing leaves your account, and one click to deploy.
 | Branding: name, logo, colors, texts, privacy and imprint links | ✓ | ✓ |
 | User management, invitations, optional self sign-up by email domain, MFA | ✓ | ✓ |
 | Guaranteed deletion: sweeper plus an S3 lifecycle hard limit | ✓ | ✓ |
-| English and German UI | ✓ | ✓ |
+| English and German UI, light and dark theme | ✓ | ✓ |
 | **Single sign-on** (SAML / OIDC: Entra ID, Okta, Google, …) | | ✓ |
 | **Malware scanning** with GuardDuty, downloads blocked until clean | | ✓ |
 | **Audit log** for the whole installation with CSV export | | ✓ |

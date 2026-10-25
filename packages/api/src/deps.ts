@@ -3,7 +3,7 @@ import type { SystemConfig } from './model.js';
 import type { Deps } from './ports.js';
 import { mergeSettings, type Settings } from './settings.js';
 
-type BaseDeps = Omit<Deps, 'now' | 'system' | 'settings' | 'invalidateSettings'> & {
+type BaseDeps = Omit<Deps, 'now' | 'system' | 'settings' | 'updateSettings'> & {
   now?: () => number;
   /** Override the deploy-time config (dev server and tests). */
   systemConfig?: SystemConfig;
@@ -31,8 +31,10 @@ export function createDeps(base: BaseDeps): Deps {
       }
       return settings.value;
     },
-    invalidateSettings() {
-      settings = null;
+    async updateSettings(change) {
+      const value = mergeSettings(await rest.store.updateSettings((stored) => change(mergeSettings(stored))));
+      settings = { value, at: Date.now() };
+      return value;
     },
   };
 }

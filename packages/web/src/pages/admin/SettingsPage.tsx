@@ -65,6 +65,7 @@ function SettingsForm({ initial }: { initial: AdminSettings }) {
             {(id) => <Input id={id} maxLength={120} value={b.welcomeTitle ?? ''} onChange={(e) => setBranding({ welcomeTitle: nullable(e.target.value) })} />}
           </Field>
         </div>
+        <p className="hint">{t('admin.colorsLightOnly')}</p>
         <Field label={t('admin.welcomeText')} optional>
           {(id) => <TextArea id={id} maxLength={1000} value={b.welcomeText ?? ''} onChange={(e) => setBranding({ welcomeText: nullable(e.target.value) })} />}
         </Field>

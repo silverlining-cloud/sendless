@@ -79,7 +79,7 @@ export function UsersPage() {
                         <Button size="sm" variant="ghost" onClick={() => void patch(u, { enabled: !u.enabled })}>
                           {u.enabled ? t('admin.disable') : t('admin.enable')}
                         </Button>
-                        <ConfirmButton confirmText={t('common.confirmDelete')} onConfirm={() => run(() => api.delete(`/api/admin/users/${encodeURIComponent(u.username)}`))}>
+                        <ConfirmButton confirmText={t('admin.deleteUserText')} onConfirm={() => run(() => api.delete(`/api/admin/users/${encodeURIComponent(u.username)}`))}>
                           {t('common.delete')}
                         </ConfirmButton>
                       </div>

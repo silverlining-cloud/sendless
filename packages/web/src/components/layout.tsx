@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { useAuth } from '../auth/AuthProvider.js';
+import { setColorScheme, storedColorScheme, type ColorScheme } from '../color-scheme.js';
 import { useConfig } from '../config.js';
-import { useI18n } from '../i18n/index.js';
-import { InboxIcon, ListIcon, SendIcon, SettingsIcon } from './icons.js';
+import { useI18n, type MessageKey } from '../i18n/index.js';
+import { InboxIcon, ListIcon, MonitorIcon, MoonIcon, SendIcon, SettingsIcon, SunIcon } from './icons.js';
 import { Button, Card, Field, Input, Loading } from './ui.js';
 
 function Brand() {
@@ -19,10 +20,41 @@ function Brand() {
 function LanguageSwitch() {
   const { locale, setLocale, t } = useI18n();
   return (
-    <div className="lang" role="group" aria-label={t('nav.language')}>
+    <div className="segmented" role="group" aria-label={t('nav.language')}>
       {(['en', 'de'] as const).map((l) => (
         <button key={l} type="button" className={l === locale ? 'active' : ''} aria-pressed={l === locale} onClick={() => setLocale(l)}>
           {l.toUpperCase()}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const SCHEMES: { scheme: ColorScheme; label: MessageKey; Icon: typeof SunIcon }[] = [
+  { scheme: 'light', label: 'footer.themeLight', Icon: SunIcon },
+  { scheme: 'system', label: 'footer.themeSystem', Icon: MonitorIcon },
+  { scheme: 'dark', label: 'footer.themeDark', Icon: MoonIcon },
+];
+
+function ColorSchemeSwitch() {
+  const { t } = useI18n();
+  const [current, setCurrent] = useState(storedColorScheme);
+  return (
+    <div className="segmented" role="group" aria-label={t('footer.theme')}>
+      {SCHEMES.map(({ scheme, label, Icon }) => (
+        <button
+          key={scheme}
+          type="button"
+          className={scheme === current ? 'active' : ''}
+          aria-pressed={scheme === current}
+          aria-label={t(label)}
+          title={t(label)}
+          onClick={() => {
+            setColorScheme(scheme);
+            setCurrent(scheme);
+          }}
+        >
+          <Icon size={14} />
         </button>
       ))}
     </div>
@@ -47,6 +79,7 @@ function Footer() {
               {t('footer.imprint')}
             </a>
           )}
+          <ColorSchemeSwitch />
           <LanguageSwitch />
         </nav>
       </div>

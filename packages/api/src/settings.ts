@@ -26,7 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
     appName: 'Sendless',
     logoUrl: null,
     primaryColor: '#2F6FB5',
-    backgroundColor: '#F4F6F8',
+    backgroundColor: '#E9EDF2',
     textColor: '#1C2430',
     welcomeTitle: null,
     welcomeText: null,

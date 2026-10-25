@@ -68,4 +68,9 @@ export class MemoryDirectory implements Directory {
     this.get(username);
     this.users.delete(username);
   }
+
+  /** Matches the `sub` that DevAuthenticator hands out. */
+  async findSub(username: string) {
+    return this.users.has(username) ? `dev-${username}` : null;
+  }
 }

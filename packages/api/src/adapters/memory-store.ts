@@ -121,19 +121,23 @@ export class MemoryStore implements Store {
     return kind === 'transfer' ? this.transfers.get(id) : this.requests.get(id);
   }
 
-  async recordFailedUnlock(kind: LockableKind, id: string, now: number, maxFailures: number, lockSeconds: number) {
+  async claimUnlockAttempt(kind: LockableKind, id: string, now: number, maxAttempts: number, windowSeconds: number) {
     const record = this.lockable(kind, id);
-    if (!record) return;
-    record.failedUnlocks += 1;
-    if (record.failedUnlocks >= maxFailures) {
-      record.failedUnlocks = 0;
-      record.lockedUntil = now + lockSeconds * 1000;
+    if (!record) return false;
+    // `!(… > now)` also opens a window for dev snapshots saved before these fields existed.
+    if (!(record.unlockWindowEnds > now)) {
+      record.unlockAttempts = 1;
+      record.unlockWindowEnds = now + windowSeconds * 1000;
+      return true;
     }
+    if (record.unlockAttempts >= maxAttempts) return false;
+    record.unlockAttempts += 1;
+    return true;
   }
 
-  async clearFailedUnlocks(kind: LockableKind, id: string) {
+  async clearUnlockAttempts(kind: LockableKind, id: string) {
     const record = this.lockable(kind, id);
-    if (record) record.failedUnlocks = 0;
+    if (record) record.unlockAttempts = 0;
   }
 
   async createRequest(request: RequestRecord) {
@@ -221,8 +225,10 @@ export class MemoryStore implements Store {
     return this.settings ? clone(this.settings) : null;
   }
 
-  async putSettings(settings: Settings) {
-    this.settings = clone(settings);
+  async updateSettings(change: (stored: Partial<Settings> | null) => Settings) {
+    // No await between reading and writing, so nothing can interleave.
+    this.settings = clone(change(this.settings ? clone(this.settings) : null));
+    return clone(this.settings);
   }
 
   async getSystemConfig() {

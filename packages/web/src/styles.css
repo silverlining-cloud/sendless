@@ -1,26 +1,57 @@
-/* Sendless — brand colors come from the admin settings via CSS variables (see config.tsx). */
+/*
+ * Sendless — brand colors come from the admin settings via CSS variables (see config.tsx).
+ * Light is the default theme; `data-theme="dark"` on <html> (see color-scheme.ts) switches to dark.
+ * The admin's background and text colors (--light-bg, --light-text) only apply to the light theme.
+ */
 :root {
   --brand: #2f6fb5;
   --brand-hover: #285e9a;
-  --brand-soft: #e6eef7;
   --brand-contrast: #ffffff;
-  --bg: #f4f6f8;
-  --text: #1c2430;
+  /* Brand color for text and icons on surfaces; lighter in the dark theme. */
+  --brand-text: var(--brand);
+  --brand-soft: var(--light-brand-soft, #e3ecf6);
+  --bg: var(--light-bg, #e9edf2);
+  --text: var(--light-text, #1c2430);
   --surface: #ffffff;
-  --muted: #5d6877;
-  --border: #dde2e8;
-  --border-strong: #c3cad3;
+  /* Boxes inside cards: messages, hover fills, disabled inputs, progress tracks. */
+  --inset: #eef2f6;
+  --input-bg: #ffffff;
+  --muted: #566170;
+  --border: #d3d9e1;
+  /* Borders of inputs and other controls: at least 3:1 against the surface. */
+  --border-strong: #8b95a3;
   --danger: #b42318;
   --danger-soft: #fdecea;
   --success: #1e7b45;
-  --success-soft: #e7f5ec;
+  --success-soft: #e4f4ea;
   --warning: #9a5b00;
-  --warning-soft: #fdf3e1;
+  --warning-soft: #fdf1dc;
   --radius: 10px;
   --radius-sm: 6px;
-  --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 8%);
+  --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 3px 10px rgb(16 24 40 / 7%);
   --focus: 0 0 0 3px color-mix(in srgb, var(--brand) 35%, transparent);
   color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --brand-text: var(--dark-brand-text, #82a9d3);
+  --brand-soft: color-mix(in srgb, var(--brand) 26%, #161b22);
+  --bg: #0d1117;
+  --text: #e4e8ee;
+  --surface: #161b22;
+  --inset: #1f2630;
+  --input-bg: #0f141a;
+  --muted: #9aa5b3;
+  --border: #2e3642;
+  --border-strong: #64707f;
+  --danger: #ff8077;
+  --danger-soft: #3d1f1f;
+  --success: #5bd08e;
+  --success-soft: #163222;
+  --warning: #eab154;
+  --warning-soft: #3a2b12;
+  --shadow: 0 1px 2px rgb(0 0 0 / 45%), 0 3px 10px rgb(0 0 0 / 25%);
+  color-scheme: dark;
 }
 
 *,
@@ -61,7 +92,7 @@ p {
   margin: 0;
 }
 a {
-  color: var(--brand);
+  color: var(--brand-text);
 }
 .muted {
   color: var(--muted);
@@ -150,6 +181,12 @@ main.narrow {
   max-height: 40px;
   max-width: 200px;
 }
+/* Logos are made for the light header; give them a light backing in the dark theme. */
+[data-theme='dark'] .brand img {
+  background: #ffffff;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+}
 .brand-mark {
   width: 28px;
   height: 28px;
@@ -184,13 +221,14 @@ main.narrow {
 }
 .nav a:hover,
 .subnav a:hover {
-  background: var(--bg);
+  background: var(--inset);
   color: var(--text);
 }
 .nav a.active,
 .subnav a.active {
   background: var(--brand-soft);
-  color: var(--brand);
+  color: var(--brand-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-text) 25%, transparent);
 }
 .user {
   display: flex;
@@ -244,22 +282,33 @@ main.narrow {
 .footer a {
   color: var(--muted);
 }
-.lang {
+/* Small button groups in the footer: language and light/dark theme. */
+.segmented {
   display: inline-flex;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   overflow: hidden;
 }
-.lang button {
+.segmented button {
+  display: inline-flex;
+  align-items: center;
   border: 0;
   background: transparent;
   padding: 3px 9px;
+  min-height: 26px;
   font: inherit;
   font-size: 0.78rem;
   cursor: pointer;
   color: var(--muted);
 }
-.lang button.active {
+.segmented button + button {
+  border-left: 1px solid var(--border);
+}
+.segmented button:hover:not(.active) {
+  background: var(--inset);
+  color: var(--text);
+}
+.segmented button.active {
   background: var(--brand);
   color: var(--brand-contrast);
 }
@@ -323,7 +372,8 @@ main.narrow {
 }
 .message {
   white-space: pre-wrap;
-  background: var(--bg);
+  background: var(--inset);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
 }
@@ -388,14 +438,14 @@ main.narrow {
   width: 100%;
   font: inherit;
   color: var(--text);
-  background: var(--surface);
+  background: var(--input-bg);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   padding: 9px 11px;
   transition: border-color 0.15s;
 }
 .input:hover {
-  border-color: var(--muted);
+  border-color: var(--text);
 }
 .input:focus {
   outline: none;
@@ -403,7 +453,8 @@ main.narrow {
   box-shadow: var(--focus);
 }
 .input:disabled {
-  background: var(--bg);
+  background: var(--inset);
+  border-color: var(--border);
   color: var(--muted);
 }
 textarea.input {
@@ -520,14 +571,15 @@ textarea.input {
   color: var(--text);
 }
 .btn-secondary:hover:not(:disabled) {
-  border-color: var(--muted);
+  border-color: var(--text);
+  background: var(--inset);
 }
 .btn-ghost {
   background: transparent;
   color: var(--text);
 }
 .btn-ghost:hover:not(:disabled) {
-  background: var(--bg);
+  background: var(--inset);
 }
 .btn-danger {
   background: var(--surface);
@@ -542,7 +594,7 @@ textarea.input {
   background: none;
   padding: 0;
   font: inherit;
-  color: var(--brand);
+  color: var(--brand-text);
   text-decoration: underline;
   cursor: pointer;
 }
@@ -564,7 +616,7 @@ textarea.input {
   padding: 2px 8px;
   border-radius: 999px;
   white-space: nowrap;
-  background: var(--bg);
+  background: var(--inset);
   color: var(--muted);
   border: 1px solid var(--border);
 }
@@ -585,8 +637,8 @@ textarea.input {
 }
 .badge-brand {
   background: var(--brand-soft);
-  color: var(--brand);
-  border-color: transparent;
+  color: var(--brand-text);
+  border-color: color-mix(in srgb, var(--brand-text) 30%, transparent);
 }
 .alert {
   display: flex;
@@ -683,9 +735,9 @@ textarea.input {
   padding: 14px 18px;
 }
 .dropzone-active {
-  border-color: var(--brand);
+  border-color: var(--brand-text);
   background: var(--brand-soft);
-  color: var(--brand);
+  color: var(--brand-text);
 }
 .file-picker {
   display: flex;
@@ -732,7 +784,8 @@ textarea.input {
 .progress {
   height: 10px;
   border-radius: 999px;
-  background: var(--bg);
+  background: var(--inset);
+  box-shadow: inset 0 0 0 1px var(--border);
   overflow: hidden;
 }
 .progress-bar {
@@ -774,8 +827,8 @@ textarea.input {
   cursor: pointer;
 }
 .tabs button.active {
-  color: var(--brand);
-  border-bottom-color: var(--brand);
+  color: var(--brand-text);
+  border-bottom-color: var(--brand-text);
 }
 .list {
   list-style: none;
@@ -802,7 +855,7 @@ textarea.input {
   text-decoration: none;
 }
 a.list-main:hover .list-title {
-  color: var(--brand);
+  color: var(--brand-text);
 }
 .list-title {
   font-weight: 600;

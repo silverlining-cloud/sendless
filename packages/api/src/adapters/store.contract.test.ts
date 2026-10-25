@@ -8,7 +8,7 @@ import { CreateTableCommand, DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { RequestRecord, StoredFile, TransferRecord } from '../model.js';
 import type { Store } from '../ports.js';
-import { mergeSettings } from '../settings.js';
+import { mergeSettings, type Settings } from '../settings.js';
 import { DynamoStore } from './dynamo-store.js';
 import { MemoryStore } from './memory-store.js';
 
@@ -73,8 +73,8 @@ function transfer(id: string, overrides: Partial<TransferRecord> = {}): Transfer
     maxOpens: null,
     opens: 0,
     passwordHash: null,
-    failedUnlocks: 0,
-    lockedUntil: 0,
+    unlockAttempts: 0,
+    unlockWindowEnds: 0,
     status: 'uploading',
     uploadToken: 'token',
     files: { a: file('a'), b: file('b') },
@@ -98,8 +98,8 @@ function request(id: string, overrides: Partial<RequestRecord> = {}): RequestRec
     createdAt: T0,
     expiresAt: T0 + 24 * HOUR,
     passwordHash: null,
-    failedUnlocks: 0,
-    lockedUntil: 0,
+    unlockAttempts: 0,
+    unlockWindowEnds: 0,
     maxSubmissions: 2,
     submissions: 0,
     maxBytesPerSubmission: null,
@@ -176,16 +176,35 @@ describe.each(factories)('%s contract', (_name, make) => {
     expect((await store.listDue(T0 + 200 * HOUR, 10)).map((d) => d.id).sort()).toEqual(['r1', 't2']);
   });
 
-  it('locks after repeated failed unlocks and can be cleared', async () => {
+  it('applies concurrent settings changes on top of each other', async () => {
+    const change = (patch: Partial<Settings>) => (stored: Partial<Settings> | null) => ({ ...mergeSettings(stored), ...patch });
+    await Promise.all([
+      store.updateSettings(change({ showSenderEmail: false })),
+      store.updateSettings(change({ licenseKey: 'key' })),
+      store.updateSettings(change({ policies: { ...mergeSettings(null).policies, requirePassword: true } })),
+    ]);
+    expect(await store.getSettings()).toMatchObject({ showSenderEmail: false, licenseKey: 'key', policies: { requirePassword: true } });
+  });
+
+  it('claims password attempts up to the limit per window, also in parallel', async () => {
     await store.createTransfer(transfer('t1'));
-    for (let i = 0; i < 3; i++) await store.recordFailedUnlock('transfer', 't1', T0, 3, 60);
-    expect((await store.getTransfer('t1'))!).toMatchObject({ failedUnlocks: 0, lockedUntil: T0 + 60_000 });
-    await store.recordFailedUnlock('transfer', 't1', T0, 3, 60);
-    await store.clearFailedUnlocks('transfer', 't1');
-    expect((await store.getTransfer('t1'))!.failedUnlocks).toBe(0);
+    const claims = await Promise.all(Array.from({ length: 8 }, () => store.claimUnlockAttempt('transfer', 't1', T0, 3, 60)));
+    expect(claims.filter(Boolean)).toHaveLength(3);
+    expect((await store.getTransfer('t1'))!).toMatchObject({ unlockAttempts: 3, unlockWindowEnds: T0 + 60_000 });
+    expect(await store.claimUnlockAttempt('transfer', 't1', T0 + 59_999, 3, 60)).toBe(false);
+    // A new window starts once the old one has ended.
+    expect(await store.claimUnlockAttempt('transfer', 't1', T0 + 60_000, 3, 60)).toBe(true);
+    expect((await store.getTransfer('t1'))!).toMatchObject({ unlockAttempts: 1, unlockWindowEnds: T0 + 120_000 });
+
+    await store.claimUnlockAttempt('transfer', 't1', T0 + 60_001, 3, 60);
+    await store.claimUnlockAttempt('transfer', 't1', T0 + 60_002, 3, 60);
+    await store.clearUnlockAttempts('transfer', 't1');
+    expect(await store.claimUnlockAttempt('transfer', 't1', T0 + 60_003, 3, 60)).toBe(true);
+
     await store.createRequest(request('r1'));
-    await store.recordFailedUnlock('request', 'r1', T0, 1, 60);
-    expect((await store.getRequest('r1'))!.lockedUntil).toBe(T0 + 60_000);
+    expect(await store.claimUnlockAttempt('request', 'r1', T0, 1, 60)).toBe(true);
+    expect(await store.claimUnlockAttempt('request', 'r1', T0, 1, 60)).toBe(false);
+    expect(await store.claimUnlockAttempt('request', 'missing', T0, 1, 60)).toBe(false);
   });
 
   it('pages through an owner’s transfers newest first, per kind', async () => {
@@ -246,7 +265,7 @@ describe.each(factories)('%s contract', (_name, make) => {
 
     expect(await store.getSettings()).toBeNull();
     const settings = mergeSettings({ licenseKey: 'x' });
-    await store.putSettings(settings);
+    expect(await store.updateSettings(() => settings)).toEqual(settings);
     expect(await store.getSettings()).toEqual(settings);
 
     const system = { appUrl: 'https://x', userPoolId: 'p', clientId: 'c', cognitoDomain: 'd', selfSignUp: false };

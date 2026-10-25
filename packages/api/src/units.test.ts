@@ -27,6 +27,14 @@ describe('file names', () => {
     expect(sanitizeFileName('a\u0000b\nc.txt')).toBe('abc.txt');
     expect(sanitizeFileName('   ')).toBe('file');
   });
+  it('strips invisible characters that disguise a name and the trailing dots Windows ignores', () => {
+    expect(sanitizeFileName('invoice\u202Efdp.exe')).toBe('invoicefdp.exe');
+    expect(sanitizeFileName('setup.exe\u200B')).toBe('setup.exe');
+    expect(sanitizeFileName('setup.exe\u0085')).toBe('setup.exe');
+    expect(sanitizeFileName('setup.exe. . ')).toBe('setup.exe');
+    expect(sanitizeFileName('Grüße 2026.pdf')).toBe('Grüße 2026.pdf');
+    expect(sanitizeFileName('...')).toBe('file');
+  });
   it('builds a header that cannot be broken out of', () => {
     expect(contentDisposition('Bericht "Q1"; ö.pdf')).toBe(
       `attachment; filename="Bericht _Q1__ o.pdf"; filename*=UTF-8''Bericht%20%22Q1%22%3B%20%C3%B6.pdf`,

@@ -21,7 +21,7 @@ export const MAX_RECIPIENTS = 50;
 /** Recipient session after unlocking a transfer. */
 export const SESSION_TTL_SECONDS = 3600;
 
-/** Failed password attempts before a link is locked, and for how long. */
+/** Password attempts per link within one window, and the window length; further attempts wait for the next window. */
 export const MAX_FAILED_UNLOCKS = 10;
 export const LOCKOUT_SECONDS = 15 * 60;
 

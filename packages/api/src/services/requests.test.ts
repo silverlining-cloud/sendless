@@ -99,3 +99,36 @@ describe('file requests', () => {
     expect((await h.call('GET', `/api/public/requests/${second.id}`)).statusCode).toBe(410);
   });
 });
+
+describe('deleting a user', () => {
+  it('closes their links and file requests and deletes their files', async () => {
+    const h = createHarness();
+    const sent = await h.call('POST', '/api/transfers', {
+      as: 'user',
+      body: { files: [{ name: 'a.pdf', size: 10 }], expiresInHours: 24, maxOpens: null },
+    });
+    await finishUpload(h, sent.json);
+    const request = await createRequest(h, { maxSubmissions: null });
+    await finishUpload(h, (await submit(h, request.id)).json);
+    const inProgress = (await submit(h, request.id)).json as SubmissionResult;
+    const theirs = await h.call('POST', '/api/transfers', { as: 'admin', body: { files: [{ name: 'b.pdf', size: 10 }], expiresInHours: 24, maxOpens: null } });
+    await finishUpload(h, theirs.json);
+    expect(h.blobs.objects.size).toBe(3);
+
+    expect((await h.call('DELETE', '/api/admin/users/user-example-com', { as: 'admin' })).statusCode).toBe(204);
+
+    expect((await h.call('GET', `/api/public/transfers/${sent.json.transfer.id}`)).statusCode).toBe(410);
+    expect((await h.call('GET', `/api/public/requests/${request.id}`)).statusCode).toBe(410);
+    const finalize = await h.call('POST', `/api/public/uploads/${inProgress.upload.transferId}/finalize`, {
+      body: { uploadToken: inProgress.upload.uploadToken },
+    });
+    expect(finalize.json.error.code).toBe('upload_closed');
+    // Only the other user's file is left, and no unfinished multipart upload.
+    expect([...h.blobs.objects.keys()]).toEqual([expect.stringContaining(theirs.json.transfer.id)]);
+    expect(h.blobs.uploads.size).toBe(0);
+    expect((await h.call('GET', `/api/public/transfers/${theirs.json.transfer.id}`)).statusCode).toBe(200);
+
+    const [deleted] = await h.store.listEvents('ADMIN', 1);
+    expect(deleted).toMatchObject({ action: 'user.deleted', details: { transfersClosed: 3, requestsClosed: 1 } });
+  });
+});

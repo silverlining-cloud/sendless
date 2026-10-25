@@ -32,8 +32,14 @@ export interface Store {
   /** Ends a transfer and removes it from the due index. Returns the record before the change. */
   endTransfer(id: string, status: 'expired' | 'revoked', ttl: number): Promise<TransferRecord | null>;
 
-  recordFailedUnlock(kind: LockableKind, id: string, now: number, maxFailures: number, lockSeconds: number): Promise<void>;
-  clearFailedUnlocks(kind: LockableKind, id: string): Promise<void>;
+  /**
+   * Atomically claims one password attempt: at most `maxAttempts` per window of `windowSeconds`, which
+   * starts with the first attempt. False when the window's attempts are used up. Claimed before the
+   * password is checked, so parallel guesses cannot exceed the limit.
+   */
+  claimUnlockAttempt(kind: LockableKind, id: string, now: number, maxAttempts: number, windowSeconds: number): Promise<boolean>;
+  /** Gives back the current window's attempts after a correct password. */
+  clearUnlockAttempts(kind: LockableKind, id: string): Promise<void>;
 
   createRequest(request: RequestRecord): Promise<void>;
   getRequest(id: string): Promise<RequestRecord | null>;
@@ -53,7 +59,11 @@ export interface Store {
   listEventsByDay(day: string, opts: { limit: number; cursor?: string | null }): Promise<Page<EventRecord>>;
 
   getSettings(): Promise<Partial<Settings> | null>;
-  putSettings(settings: Settings): Promise<void>;
+  /**
+   * Read-modify-write with optimistic locking: `change` receives the latest stored settings and runs
+   * again if another write landed in between, so concurrent saves never undo each other.
+   */
+  updateSettings(change: (stored: Partial<Settings> | null) => Settings): Promise<Settings>;
   getSystemConfig(): Promise<SystemConfig | null>;
   putSystemConfig(config: SystemConfig): Promise<void>;
 
@@ -88,6 +98,8 @@ export interface Directory {
   setEnabled(username: string, enabled: boolean): Promise<void>;
   setAdmin(username: string, admin: boolean): Promise<void>;
   deleteUser(username: string): Promise<void>;
+  /** The user's `sub`, which owns their transfers and requests; null if there is no such user. */
+  findSub(username: string): Promise<string | null>;
 }
 
 export interface MailMessage {
@@ -146,7 +158,8 @@ export interface Deps {
   system(): Promise<SystemConfig>;
   /** Admin settings merged with defaults (cached for a few seconds). */
   settings(): Promise<Settings>;
-  invalidateSettings(): void;
+  /** Changes the stored settings (never the cached copy, which may be stale) and refreshes the cache. */
+  updateSettings(change: (current: Settings) => Settings): Promise<Settings>;
 }
 
 /** What Pro route handlers (ee/) receive from the core. */

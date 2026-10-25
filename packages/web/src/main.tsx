@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App.js';
 import { isApiError } from './components/ui.js';
 import { AuthProvider } from './auth/AuthProvider.js';
+import { initColorScheme } from './color-scheme.js';
 import { ConfigProvider } from './config.js';
 import { I18nProvider, useT } from './i18n/index.js';
 import './styles.css';
@@ -28,6 +29,8 @@ function Boot({ error, retry }: { error?: Error; retry?: () => void }) {
     </div>
   );
 }
+
+initColorScheme();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

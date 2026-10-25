@@ -84,8 +84,7 @@ if (process.env.SENDLESS_DEV_PRO === '1') {
     exp: now + 30 * 86_400,
   })}`;
   const licenseKey = `${input}.${sign(null, Buffer.from(input), privateKey).toString('base64url')}`;
-  await store.putSettings({ ...(await deps.settings()), licenseKey });
-  deps.invalidateSettings();
+  await deps.updateSettings((current) => ({ ...current, licenseKey }));
   log.info('Pro features enabled with a development license');
 }
 

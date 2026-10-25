@@ -148,6 +148,35 @@ describe('outbound transfers', () => {
     expect(ok.statusCode).toBe(200);
   });
 
+  it('checks at most 10 passwords even when guesses arrive in parallel', async () => {
+    const h = createHarness();
+    const created = await createTransfer(h, { password: 'correct horse' });
+    await upload(h, created.upload);
+    const id = created.transfer.id;
+
+    const guesses = Array.from({ length: 40 }, (_, i) => (i === 30 ? 'correct horse' : `guess ${i}`));
+    const results = await Promise.all(
+      guesses.map((password) => h.call('POST', `/api/public/transfers/${id}/unlock`, { body: { password } })),
+    );
+    const checked = results.filter((r) => r.statusCode !== 429);
+    expect(checked).toHaveLength(10);
+    expect(results[30]!.statusCode).toBe(429);
+  });
+
+  it('does not count a correct password or a missing one against the limit', async () => {
+    const h = createHarness();
+    const created = await createTransfer(h, { password: 'correct horse', maxOpens: null });
+    await upload(h, created.upload);
+    const id = created.transfer.id;
+    const unlock = (password?: string) => h.call('POST', `/api/public/transfers/${id}/unlock`, { body: { password } });
+
+    for (let i = 0; i < 9; i++) expect((await unlock('wrong')).statusCode).toBe(401);
+    expect((await unlock()).json.error.code).toBe('wrong_password');
+    expect((await unlock('correct horse')).statusCode).toBe(200);
+    for (let i = 0; i < 9; i++) expect((await unlock('wrong')).statusCode).toBe(401);
+    expect((await unlock('correct horse')).statusCode).toBe(200);
+  });
+
   it('expires links and lets the sweeper delete the files', async () => {
     const h = createHarness();
     const created = await createTransfer(h, { expiresInHours: 1 });

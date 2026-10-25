@@ -101,9 +101,7 @@ export function registerProRoutes(r: Router, ctx: ProRouteContext): void {
     const principal = await ctx.requireAdmin(req);
     await ctx.requireFeature('policies');
     const policies = parseBody(req, policiesSchema);
-    const settings = await deps.settings();
-    await deps.store.putSettings({ ...settings, policies });
-    deps.invalidateSettings();
+    await deps.updateSettings((current) => ({ ...current, policies }));
     await recordEvent(deps, { subject: ADMIN_SUBJECT, action: 'policies.updated', actor: userActor(principal), req });
     return json(200, policies);
   });
@@ -120,14 +118,12 @@ export function registerProRoutes(r: Router, ctx: ProRouteContext): void {
     await ctx.requireFeature('sso');
     const input = parseBody(req, ssoProviderInput);
     await deps.idp.create(input);
-    const settings = await deps.settings();
-    const providers = [
-      ...settings.sso.providers.filter((p) => p.name !== input.name),
-      { name: input.name, type: input.type, emailDomains: input.emailDomains },
-    ];
-    await deps.store.putSettings({ ...settings, sso: { providers } });
-    deps.invalidateSettings();
-    await deps.idp.syncClient(providers.map((p) => p.name));
+    const provider = { name: input.name, type: input.type, emailDomains: input.emailDomains };
+    const { sso } = await deps.updateSettings((current) => ({
+      ...current,
+      sso: { providers: [...current.sso.providers.filter((p) => p.name !== input.name), provider] },
+    }));
+    await deps.idp.syncClient(sso.providers.map((p) => p.name));
     await recordEvent(deps, {
       subject: ADMIN_SUBJECT,
       action: 'sso.provider_added',
@@ -141,13 +137,14 @@ export function registerProRoutes(r: Router, ctx: ProRouteContext): void {
   r.delete('/api/admin/sso/providers/{name}', async (req, p) => {
     const principal = await ctx.requireAdmin(req);
     await ctx.requireFeature('sso');
-    const settings = await deps.settings();
-    const providers = settings.sso.providers.filter((x) => x.name !== p.name);
+    const { sso } = await deps.updateSettings((current) => ({
+      ...current,
+      sso: { providers: current.sso.providers.filter((x) => x.name !== p.name) },
+    }));
     // Detach from the client first; Cognito refuses to delete a provider that is still in use.
-    await deps.idp.syncClient(providers.map((x) => x.name));
+    // If deleting fails, the provider stays listed (the list comes from Cognito) and can be removed again.
+    await deps.idp.syncClient(sso.providers.map((x) => x.name));
     await deps.idp.delete(p.name!);
-    await deps.store.putSettings({ ...settings, sso: { providers } });
-    deps.invalidateSettings();
     await recordEvent(deps, {
       subject: ADMIN_SUBJECT,
       action: 'sso.provider_removed',

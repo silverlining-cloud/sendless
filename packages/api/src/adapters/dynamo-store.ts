@@ -9,7 +9,7 @@ import {
   type QueryCommandInput,
 } from '@aws-sdk/lib-dynamodb';
 import type { ScanStatus, TransferKind } from '@sendless/shared';
-import { badRequest } from '../http.js';
+import { badRequest, conflict } from '../http.js';
 import type { EventRecord, RequestRecord, SessionRecord, StoredFile, SystemConfig, TransferRecord } from '../model.js';
 import type { DueItem, LockableKind, OpenResult, Page, Store } from '../ports.js';
 import type { Settings } from '../settings.js';
@@ -31,6 +31,7 @@ import type { Settings } from '../settings.js';
 const pad = (n: number) => String(Math.max(0, Math.floor(n))).padStart(15, '0');
 const transferKey = (id: string) => ({ PK: `TRANSFER#${id}`, SK: 'META' });
 const requestKey = (id: string) => ({ PK: `REQUEST#${id}`, SK: 'META' });
+const SETTINGS_KEY = { PK: 'SETTINGS', SK: 'GLOBAL' };
 
 type Item = Record<string, unknown>;
 
@@ -103,8 +104,8 @@ function transferFromItem(item: Item): TransferRecord {
     maxOpens: (item.maxOpens as number | undefined) ?? null,
     opens: (item.opens as number | undefined) ?? 0,
     passwordHash: (item.passwordHash as string | null) ?? null,
-    failedUnlocks: (item.failedUnlocks as number | undefined) ?? 0,
-    lockedUntil: (item.lockedUntil as number | undefined) ?? 0,
+    unlockAttempts: (item.unlockAttempts as number | undefined) ?? 0,
+    unlockWindowEnds: (item.unlockWindowEnds as number | undefined) ?? 0,
     status: item.status as TransferRecord['status'],
     uploadToken: item.uploadToken as string,
     files: Object.fromEntries(Object.entries(files).map(([id, f]) => [id, fileFromItem(f)])),
@@ -140,8 +141,8 @@ function requestFromItem(item: Item): RequestRecord {
     createdAt: item.createdAt as number,
     expiresAt: item.expiresAt as number,
     passwordHash: (item.passwordHash as string | null) ?? null,
-    failedUnlocks: (item.failedUnlocks as number | undefined) ?? 0,
-    lockedUntil: (item.lockedUntil as number | undefined) ?? 0,
+    unlockAttempts: (item.unlockAttempts as number | undefined) ?? 0,
+    unlockWindowEnds: (item.unlockWindowEnds as number | undefined) ?? 0,
     maxSubmissions: (item.maxSubmissions as number | undefined) ?? null,
     submissions: (item.submissions as number | undefined) ?? 0,
     maxBytesPerSubmission: (item.maxBytesPerSubmission as number | null) ?? null,
@@ -329,28 +330,30 @@ export class DynamoStore implements Store {
 
   // ---------- lockout ----------
 
-  async recordFailedUnlock(kind: LockableKind, id: string, now: number, maxFailures: number, lockSeconds: number) {
-    const key = kind === 'transfer' ? transferKey(id) : requestKey(id);
-    const item = await this.update({
-      Key: key,
-      UpdateExpression: 'ADD failedUnlocks :one',
-      ConditionExpression: 'attribute_exists(PK)',
-      ExpressionAttributeValues: { ':one': 1 },
-      ReturnValues: 'UPDATED_NEW',
+  /** Each claim is one conditional write, so there is no state a crash could leave locked for good. */
+  async claimUnlockAttempt(kind: LockableKind, id: string, now: number, maxAttempts: number, windowSeconds: number) {
+    const Key = kind === 'transfer' ? transferKey(id) : requestKey(id);
+    // The first attempt after a window has ended (or ever) opens a new window.
+    const opened = await this.update({
+      Key,
+      UpdateExpression: 'SET unlockAttempts = :one, unlockWindowEnds = :end',
+      ConditionExpression: 'attribute_exists(PK) AND (attribute_not_exists(unlockWindowEnds) OR unlockWindowEnds <= :now)',
+      ExpressionAttributeValues: { ':one': 1, ':end': now + windowSeconds * 1000, ':now': now },
     });
-    if (item && Number(item.failedUnlocks) >= maxFailures) {
-      await this.update({
-        Key: key,
-        UpdateExpression: 'SET failedUnlocks = :zero, lockedUntil = :until',
-        ExpressionAttributeValues: { ':zero': 0, ':until': now + lockSeconds * 1000 },
-      });
-    }
+    if (opened) return true;
+    const counted = await this.update({
+      Key,
+      UpdateExpression: 'ADD unlockAttempts :one',
+      ConditionExpression: 'unlockWindowEnds > :now AND unlockAttempts < :max',
+      ExpressionAttributeValues: { ':one': 1, ':now': now, ':max': maxAttempts },
+    });
+    return counted !== null;
   }
 
-  async clearFailedUnlocks(kind: LockableKind, id: string) {
+  async clearUnlockAttempts(kind: LockableKind, id: string) {
     await this.update({
       Key: kind === 'transfer' ? transferKey(id) : requestKey(id),
-      UpdateExpression: 'SET failedUnlocks = :zero',
+      UpdateExpression: 'SET unlockAttempts = :zero',
       ConditionExpression: 'attribute_exists(PK)',
       ExpressionAttributeValues: { ':zero': 0 },
     });
@@ -487,12 +490,31 @@ export class DynamoStore implements Store {
   // ---------- settings / system ----------
 
   async getSettings() {
-    const item = await this.get({ PK: 'SETTINGS', SK: 'GLOBAL' });
+    const item = await this.get(SETTINGS_KEY);
     return (item?.settings as Partial<Settings> | undefined) ?? null;
   }
 
-  async putSettings(settings: Settings) {
-    await this.db.send(new PutCommand({ TableName: this.table, Item: { PK: 'SETTINGS', SK: 'GLOBAL', type: 'settings', settings } }));
+  async updateSettings(change: (stored: Partial<Settings> | null) => Settings) {
+    for (let attempt = 1; ; attempt++) {
+      const item = await this.get(SETTINGS_KEY);
+      const version = (item?.version as number | undefined) ?? 0;
+      const settings = change((item?.settings as Partial<Settings> | undefined) ?? null);
+      try {
+        await this.db.send(
+          new PutCommand({
+            TableName: this.table,
+            Item: { ...SETTINGS_KEY, type: 'settings', settings, version: version + 1 },
+            // Items written before versioning have no version; they count as version 0.
+            ConditionExpression: version === 0 ? 'attribute_not_exists(version)' : 'version = :version',
+            ...(version === 0 ? {} : { ExpressionAttributeValues: { ':version': version } }),
+          }),
+        );
+        return settings;
+      } catch (error) {
+        if (!isConditionFailure(error)) throw error;
+        if (attempt >= 5) throw conflict('The settings were changed at the same time. Please try again.');
+      }
+    }
   }
 
   async getSystemConfig() {

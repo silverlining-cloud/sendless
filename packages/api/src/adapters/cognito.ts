@@ -4,11 +4,13 @@ import {
   AdminDeleteUserCommand,
   AdminDisableUserCommand,
   AdminEnableUserCommand,
+  AdminGetUserCommand,
   AdminRemoveUserFromGroupCommand,
   AdminUserGlobalSignOutCommand,
   CognitoIdentityProviderClient,
   ListUsersCommand,
   ListUsersInGroupCommand,
+  UserNotFoundException,
   UsernameExistsException,
   type UserType,
 } from '@aws-sdk/client-cognito-identity-provider';
@@ -140,5 +142,15 @@ export class CognitoDirectory implements Directory {
 
   async deleteUser(username: string) {
     await this.cognito.send(new AdminDeleteUserCommand({ UserPoolId: await this.pool(), Username: username }));
+  }
+
+  async findSub(username: string) {
+    try {
+      const user = await this.cognito.send(new AdminGetUserCommand({ UserPoolId: await this.pool(), Username: username }));
+      return user.UserAttributes?.find((a) => a.Name === 'sub')?.Value ?? null;
+    } catch (error) {
+      if (error instanceof UserNotFoundException) return null;
+      throw error;
+    }
   }
 }

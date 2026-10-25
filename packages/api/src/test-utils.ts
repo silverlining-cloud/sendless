@@ -63,9 +63,13 @@ export interface Harness {
   clock: { now: number; advance(ms: number): void };
   admin: Principal;
   user: Principal;
-  call(method: string, path: string, opts?: { body?: unknown; as?: 'admin' | 'user'; ip?: string }): Promise<HttpResponse & { json: any }>;
+  call: Caller;
+  /** Another API instance on the same store with its own settings cache, like a second Lambda container. */
+  instance(): Caller;
   request(overrides?: Partial<HttpRequest>): HttpRequest;
 }
+
+type Caller = (method: string, path: string, opts?: { body?: unknown; as?: 'admin' | 'user'; ip?: string }) => Promise<HttpResponse & { json: any }>;
 
 export function createHarness(options: { malwareScanning?: boolean; email?: boolean } = {}): Harness {
   const clock = {
@@ -87,18 +91,20 @@ export function createHarness(options: { malwareScanning?: boolean; email?: bool
     { email: 'admin@example.com', admin: true },
     { email: 'user@example.com', admin: false },
   ]);
-  const deps = createDeps({
-    env: { version: 'test', region: 'eu-central-1', maxRetentionDays: 30, malwareScanning: options.malwareScanning ?? false, devMode: true },
-    store,
-    blobs,
-    directory,
-    idp: new MemoryIdentityProviders(),
-    mailer: options.email === false ? { enabled: false, send: async () => {} } : mailer,
-    auth: new DevAuthenticator(directory),
-    log: silentLog,
-    now: () => clock.now,
-  });
-  const app = createApp(deps);
+  const idp = new MemoryIdentityProviders();
+  const newDeps = () =>
+    createDeps({
+      env: { version: 'test', region: 'eu-central-1', maxRetentionDays: 30, malwareScanning: options.malwareScanning ?? false, devMode: true },
+      store,
+      blobs,
+      directory,
+      idp,
+      mailer: options.email === false ? { enabled: false, send: async () => {} } : mailer,
+      auth: new DevAuthenticator(directory),
+      log: silentLog,
+      now: () => clock.now,
+    });
+  const deps = newDeps();
   const request = (overrides: Partial<HttpRequest> = {}): HttpRequest => ({
     method: 'GET',
     path: '/',
@@ -110,17 +116,9 @@ export function createHarness(options: { malwareScanning?: boolean; email?: bool
     userAgent: 'vitest',
     ...overrides,
   });
-  return {
-    deps,
-    store,
-    blobs,
-    mailer,
-    directory,
-    clock,
-    admin: { sub: 'dev-admin-example-com', username: 'admin-example-com', email: 'admin@example.com', isAdmin: true },
-    user: { sub: 'dev-user-example-com', username: 'user-example-com', email: 'user@example.com', isAdmin: false },
-    request,
-    async call(method, path, opts = {}) {
+  const callerFor =
+    (app: ReturnType<typeof createApp>): Caller =>
+    async (method, path, opts = {}) => {
       const [pathname, qs] = path.split('?');
       const res = await app(
         request({
@@ -133,6 +131,18 @@ export function createHarness(options: { malwareScanning?: boolean; email?: bool
         }),
       );
       return { ...res, json: res.body && res.headers?.['content-type']?.includes('json') ? JSON.parse(res.body) : undefined };
-    },
+    };
+  return {
+    deps,
+    store,
+    blobs,
+    mailer,
+    directory,
+    clock,
+    admin: { sub: 'dev-admin-example-com', username: 'admin-example-com', email: 'admin@example.com', isAdmin: true },
+    user: { sub: 'dev-user-example-com', username: 'user-example-com', email: 'user@example.com', isAdmin: false },
+    request,
+    call: callerFor(createApp(deps)),
+    instance: () => callerFor(createApp(newDeps())),
   };
 }

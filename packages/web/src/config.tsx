@@ -26,16 +26,21 @@ function shade(hex: string, amount: number): string {
   return `#${channel(1)}${channel(3)}${channel(5)}`;
 }
 
-/** Applies the admin's branding as CSS variables. Colors are validated as #RRGGBB on the server. */
+/**
+ * Applies the admin's branding as CSS variables. Colors are validated as #RRGGBB on the server.
+ * Background and text colors only feed the light theme; styles.css picks per theme.
+ */
 export function applyTheme(branding: Branding) {
   const root = document.documentElement.style;
   const dark = luminance(branding.primaryColor) > 0.45;
   root.setProperty('--brand', branding.primaryColor);
   root.setProperty('--brand-hover', shade(branding.primaryColor, -0.15));
-  root.setProperty('--brand-soft', shade(branding.primaryColor, 0.88));
   root.setProperty('--brand-contrast', dark ? '#111111' : '#ffffff');
-  root.setProperty('--bg', branding.backgroundColor);
-  root.setProperty('--text', branding.textColor);
+  root.setProperty('--light-brand-soft', shade(branding.primaryColor, 0.88));
+  root.setProperty('--light-bg', branding.backgroundColor);
+  root.setProperty('--light-text', branding.textColor);
+  // Brand-colored text on dark surfaces needs a lighter shade to stay readable.
+  root.setProperty('--dark-brand-text', shade(branding.primaryColor, 0.4));
   document.title = branding.appName;
 }
 

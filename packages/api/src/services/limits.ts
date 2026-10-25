@@ -8,6 +8,7 @@ import {
 } from '@sendless/shared';
 import { applyPolicyLimits } from '@sendless/ee/api';
 import { hasFeature, type EditionState } from '../edition.js';
+import { sanitizeFileName } from '../files.js';
 import { badRequest } from '../http.js';
 import type { Env } from '../ports.js';
 import type { Settings } from '../settings.js';
@@ -40,8 +41,10 @@ export function checkFiles(files: FileInput[], limits: EffectiveLimits, maxBytes
     throw badRequest(`Transfers can be at most ${formatBytes(maxBytes)}`, 'too_large');
   }
   if (limits.blockedExtensions.length > 0) {
-    const blocked = files.find((f) => limits.blockedExtensions.includes(fileExtension(f.name)));
-    if (blocked) throw badRequest(`Files of type .${fileExtension(blocked.name)} are not allowed`, 'blocked_file_type');
+    // Check the name as it will be stored and offered for download, not as the client sent it.
+    const extensions = files.map((f) => fileExtension(sanitizeFileName(f.name)));
+    const blocked = extensions.find((ext) => limits.blockedExtensions.includes(ext));
+    if (blocked !== undefined) throw badRequest(`Files of type .${blocked} are not allowed`, 'blocked_file_type');
   }
 }
 

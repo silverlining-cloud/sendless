@@ -455,6 +455,7 @@ Resources:
               - cognito-idp:AdminDisableUser
               - cognito-idp:AdminUserGlobalSignOut
               - cognito-idp:AdminDeleteUser
+              - cognito-idp:AdminGetUser
               # Pro: SSO identity providers
               - cognito-idp:ListIdentityProviders
               - cognito-idp:DescribeIdentityProvider

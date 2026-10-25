@@ -62,8 +62,28 @@ describe('Pro: policies', () => {
     expect((await create({ maxOpens: null })).json.error.code).toBe('open_limit_required');
     expect((await create({ maxOpens: 6 })).json.error.code).toBe('open_limit_too_high');
     expect((await create({ files: [{ name: 'setup.EXE', size: 1 }] })).json.error.code).toBe('blocked_file_type');
+    // Names are checked the way they are stored and shown, not as sent.
+    for (const name of ['setup.exe\u0001', 'setup.exe.', 'setup.exe\u200B', 'invoice\u202Efdp.exe']) {
+      expect((await create({ files: [{ name, size: 1 }] })).json.error.code).toBe('blocked_file_type');
+    }
     expect((await create({ recipients: ['a@gmail.com'] })).json.error.code).toBe('recipient_not_allowed');
     expect((await create({ recipients: ['a@partner.de'] })).statusCode).toBe(201);
+  });
+
+  it('survives a settings save on another API instance with an older cached copy', async () => {
+    const h = await licensed();
+    const other = h.instance();
+    await other('GET', '/api/public/config'); // the other instance now caches the settings
+    const saved = await h.call('PUT', '/api/admin/policies', { as: 'admin', body: { ...defaultPolicies, requirePassword: true, blockedExtensions: ['exe'] } });
+    expect(saved.statusCode).toBe(200);
+
+    const current = (await h.call('GET', '/api/admin/settings', { as: 'admin' })).json.settings;
+    expect((await other('PUT', '/api/admin/settings', { as: 'admin', body: { ...current, showSenderEmail: false } })).statusCode).toBe(200);
+    expect(await h.store.getSettings()).toMatchObject({
+      showSenderEmail: false,
+      licenseKey: expect.any(String),
+      policies: { requirePassword: true, blockedExtensions: ['exe'] },
+    });
   });
 
   it('cannot be changed without the policies feature', async () => {
