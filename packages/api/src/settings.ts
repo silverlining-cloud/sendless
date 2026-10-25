@@ -1,0 +1,57 @@
+import { GiB, type Policies, type SettingsInput } from '@s3ndless/shared';
+import type { SsoProviderRecord } from './model.js';
+
+export interface Settings extends SettingsInput {
+  licenseKey: string | null;
+  /** Pro: enforced only with a license that includes `policies`. */
+  policies: Policies;
+  /** Pro: SAML/OIDC providers configured in the user pool. */
+  sso: { providers: SsoProviderRecord[] };
+}
+
+export const DEFAULT_POLICIES: Policies = {
+  requirePassword: false,
+  minPasswordLength: 8,
+  maxExpiresInHours: null,
+  requireOpenLimit: false,
+  maxOpensLimit: null,
+  blockedExtensions: [],
+  allowedRecipientDomains: [],
+  auditRetentionDays: 90,
+  allowUnscannableFiles: false,
+};
+
+export const DEFAULT_SETTINGS: Settings = {
+  branding: {
+    appName: 'S3ndless',
+    logoUrl: null,
+    primaryColor: '#2F6FB5',
+    backgroundColor: '#F4F6F8',
+    textColor: '#1C2430',
+    welcomeTitle: null,
+    welcomeText: null,
+    footerText: null,
+    privacyUrl: null,
+    imprintUrl: null,
+  },
+  defaults: { expiresInHours: 7 * 24, maxOpens: 10 },
+  limits: { maxTransferBytes: 20 * GiB, maxFilesPerTransfer: 100, allowUnlimitedOpens: true },
+  showSenderEmail: true,
+  licenseKey: null,
+  policies: DEFAULT_POLICIES,
+  sso: { providers: [] },
+};
+
+/** Fills in defaults for anything missing, so settings written by older versions keep working. */
+export function mergeSettings(stored: Partial<Settings> | null | undefined): Settings {
+  const s = stored ?? {};
+  return {
+    branding: { ...DEFAULT_SETTINGS.branding, ...s.branding },
+    defaults: { ...DEFAULT_SETTINGS.defaults, ...s.defaults },
+    limits: { ...DEFAULT_SETTINGS.limits, ...s.limits },
+    showSenderEmail: s.showSenderEmail ?? DEFAULT_SETTINGS.showSenderEmail,
+    licenseKey: s.licenseKey ?? null,
+    policies: { ...DEFAULT_POLICIES, ...s.policies },
+    sso: { providers: s.sso?.providers ?? [] },
+  };
+}

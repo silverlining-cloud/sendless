@@ -1,0 +1,40 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:latest
+        ports: ['8000:8000']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - name: Tests (including the DynamoDB store contract)
+        run: npm test
+        env:
+          DYNAMODB_ENDPOINT: http://localhost:8000
+      - name: Build a release (reproducible zips + template)
+        run: npm run release -- --base-url https://ci.invalid/s3ndless
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Lint the CloudFormation templates
+        run: |
+          pip install cfn-lint
+          cfn-lint template/s3ndless.yaml dist/release/s3ndless.yaml
+      - name: Check the inline bootstrap answers CloudFormation
+        run: python3 -I scripts/check-bootstrap.py

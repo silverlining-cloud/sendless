@@ -1,0 +1,22 @@
+{
+  "name": "@s3ndless/ee",
+  "version": "1.0.0",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "type": "module",
+  "exports": {
+    "./api": "./api/index.ts",
+    "./web": "./web/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1156.0",
+    "@s3ndless/shared": "1.0.0",
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  }
+}

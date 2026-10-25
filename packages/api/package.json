@@ -1,0 +1,35 @@
+{
+  "name": "@s3ndless/api",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    "./http": "./src/http.ts",
+    "./router": "./src/router.ts",
+    "./ports": "./src/ports.ts",
+    "./model": "./src/model.ts",
+    "./settings": "./src/settings.ts",
+    "./audit": "./src/services/audit.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/dev/server.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1156.0",
+    "@aws-sdk/client-dynamodb": "^3.1156.0",
+    "@aws-sdk/client-s3": "^3.1156.0",
+    "@aws-sdk/client-sesv2": "^3.1156.0",
+    "@aws-sdk/lib-dynamodb": "^3.1156.0",
+    "@aws-sdk/s3-request-presigner": "^3.1156.0",
+    "@s3ndless/ee": "1.0.0",
+    "@s3ndless/shared": "1.0.0",
+    "aws-jwt-verify": "^5.2.1",
+    "fflate": "^0.8.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "aws-sdk-client-mock": "^4.1.0"
+  }
+}

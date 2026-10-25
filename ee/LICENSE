@@ -1,0 +1,38 @@
+S3ndless Enterprise License
+
+DRAFT — to be reviewed by legal counsel before publication.
+
+Copyright (c) 2026 SilverLining.Cloud GmbH
+
+This license applies to all files in the "ee" directory of the S3ndless repository
+("Pro Software"). Files outside that directory are licensed under the Apache License 2.0.
+
+1. Subscription required for production use. You may use the Pro Software in production
+   only while you hold a valid S3ndless Pro license key issued by SilverLining.Cloud GmbH
+   ("Licensor") for the number of deployments and the features you use, and only in
+   accordance with the terms of your subscription.
+
+2. Development and testing. Without a subscription you may copy, modify and run the Pro
+   Software solely for development, testing and evaluation, and not with production data.
+
+3. Modifications. You may modify the Pro Software. Modified versions remain subject to this
+   license, and you may not alter, remove or circumvent the license key checks or the
+   functionality that limits use to licensed features.
+
+4. No redistribution. You may not distribute, sublicense, sell, rent, lend or offer the Pro
+   Software, or any modified version of it, as a hosted service, except to the extent that
+   Licensor grants permission in writing. Contributions to the Pro Software that you submit
+   to Licensor are licensed to Licensor under these terms and may be used without restriction.
+
+5. Third-party components. Third-party components used by the Pro Software remain under their
+   own licenses.
+
+6. No warranty. THE PRO SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+   PARTICULAR PURPOSE AND NONINFRINGEMENT, EXCEPT AS EXPRESSLY AGREED IN YOUR SUBSCRIPTION.
+   IN NO EVENT SHALL LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM
+   THE USE OF THE PRO SOFTWARE, EXCEPT AS EXPRESSLY AGREED IN YOUR SUBSCRIPTION OR AS
+   REQUIRED BY MANDATORY LAW.
+
+7. Termination. This license terminates automatically if you breach it. On termination you
+   must stop using the Pro Software in production.

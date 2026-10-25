@@ -1,0 +1,1162 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >-
+  S3ndless - serverless file transfer in your own AWS account. Expiring links, password protection,
+  file requests. CloudFront + Lambda + S3 + DynamoDB + Cognito. Version __VERSION__.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label: { default: Administrator }
+        Parameters: [AdminEmail]
+      - Label: { default: Limits }
+        Parameters: [MaxRetentionDays]
+      - Label: { default: Email (optional) }
+        Parameters: [SenderEmail]
+      - Label: { default: Sign-up (optional) }
+        Parameters: [SelfSignUpDomains]
+      - Label: { default: Custom domain (optional) }
+        Parameters: [CustomDomainName, CertificateArn]
+      - Label: { default: Pro features }
+        Parameters: [EnableMalwareScanning]
+      - Label: { default: Advanced }
+        Parameters: [CloudFrontPriceClass, LogRetentionDays, ArtifactBaseUrl]
+    ParameterLabels:
+      AdminEmail: { default: Administrator email }
+      MaxRetentionDays: { default: Maximum file lifetime (days) }
+      SenderEmail: { default: Sender email address (SES) }
+      SelfSignUpDomains: { default: Self sign-up email domains }
+      CustomDomainName: { default: Custom domain name }
+      CertificateArn: { default: ACM certificate ARN (us-east-1) }
+      EnableMalwareScanning: { default: GuardDuty malware scanning (Pro) }
+      CloudFrontPriceClass: { default: CloudFront price class }
+      LogRetentionDays: { default: Log retention (days) }
+      ArtifactBaseUrl: { default: Release artifact location }
+
+Parameters:
+  AdminEmail:
+    Type: String
+    Description: The first administrator. Receives an email with a temporary password.
+    AllowedPattern: '^[^@\s]+@[^@\s]+\.[^@\s]+$'
+    ConstraintDescription: Must be an email address.
+  MaxRetentionDays:
+    Type: Number
+    Description: >-
+      Hard upper limit for how long files are kept. Enforced by the app and by an S3 lifecycle rule,
+      so no file survives longer, even if something else fails.
+    Default: 30
+    AllowedValues: [1, 3, 7, 14, 30, 60, 90, 180, 365]
+  SenderEmail:
+    Type: String
+    Description: >-
+      Optional. An address or domain verified in Amazon SES in this Region, used to email download links
+      and notifications. Leave empty to share links by copy and paste only.
+    Default: ''
+  SelfSignUpDomains:
+    Type: String
+    Description: >-
+      Optional. Comma-separated email domains (e.g. example.com,example.de) whose users may create their own
+      account. Leave empty to allow only invited users.
+    Default: ''
+  CustomDomainName:
+    Type: String
+    Description: Optional. For example files.example.com. Point a CNAME to the CloudFront domain from the stack outputs.
+    Default: ''
+  CertificateArn:
+    Type: String
+    Description: Required with a custom domain. An ACM certificate for that domain in us-east-1 (a CloudFront requirement).
+    Default: ''
+    AllowedPattern: '^$|^arn:aws[a-zA-Z-]*:acm:us-east-1:\d{12}:certificate/.+$'
+    ConstraintDescription: Must be an ACM certificate ARN in us-east-1.
+  EnableMalwareScanning:
+    Type: String
+    Description: >-
+      Pro feature (requires a license). Scans every upload with GuardDuty Malware Protection for S3 and blocks
+      downloads until a file is clean. GuardDuty charges per GB scanned.
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+  CloudFrontPriceClass:
+    Type: String
+    Description: PriceClass_100 serves from North America and Europe (cheapest); PriceClass_All uses all edge locations.
+    Default: PriceClass_100
+    AllowedValues: [PriceClass_100, PriceClass_200, PriceClass_All]
+  LogRetentionDays:
+    Type: Number
+    Default: 30
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 180, 365, 731]
+  ArtifactBaseUrl:
+    Type: String
+    Description: >-
+      HTTPS location of backend.zip and web.zip for this version. The files are verified against SHA-256
+      checksums pinned in this template, so a mirror must serve identical files.
+    Default: https://__ARTIFACT_BASE_URL__
+    AllowedPattern: '^https://.+'
+
+Rules:
+  CustomDomainNeedsCertificate:
+    RuleCondition: !Not [!Equals [!Ref CustomDomainName, '']]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref CertificateArn, '']]
+        AssertDescription: A custom domain requires an ACM certificate ARN from us-east-1.
+
+Mappings:
+  Release:
+    Current:
+      Version: __VERSION__
+      BackendSha256: __BACKEND_SHA256__
+      WebSha256: __WEB_SHA256__
+  # S3 lifecycle backstop: MaxRetentionDays + 2 days (uploads can take up to a day before the lifetime starts).
+  Lifecycle:
+    '1': { Days: 3 }
+    '3': { Days: 5 }
+    '7': { Days: 9 }
+    '14': { Days: 16 }
+    '30': { Days: 32 }
+    '60': { Days: 62 }
+    '90': { Days: 92 }
+    '180': { Days: 182 }
+    '365': { Days: 367 }
+
+Conditions:
+  HasSenderEmail: !Not [!Equals [!Ref SenderEmail, '']]
+  HasSelfSignUp: !Not [!Equals [!Ref SelfSignUpDomains, '']]
+  HasCustomDomain: !Not [!Equals [!Ref CustomDomainName, '']]
+  MalwareScanning: !Equals [!Ref EnableMalwareScanning, 'true']
+
+Resources:
+  # ---------------------------------------------------------------------------
+  # Release artifacts: downloaded once per version into a bucket this stack owns.
+  # ---------------------------------------------------------------------------
+  ArtifactsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules: [{ ObjectOwnership: BucketOwnerEnforced }]
+
+  ArtifactsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ArtifactsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: [!GetAtt ArtifactsBucket.Arn, !Sub '${ArtifactsBucket.Arn}/*']
+            Condition: { Bool: { 'aws:SecureTransport': 'false' } }
+
+  BootstrapLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/bootstrap'
+      RetentionInDays: !Ref LogRetentionDays
+
+  BootstrapRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: bootstrap
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt BootstrapLogGroup.Arn
+              - Effect: Allow
+                Action: [s3:PutObject, s3:DeleteObject]
+                Resource: !Sub '${ArtifactsBucket.Arn}/*'
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt ArtifactsBucket.Arn
+
+  BootstrapFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: S3ndless - copies the pinned release artifacts into the stack's artifact bucket
+      Runtime: python3.13
+      Architectures: [arm64]
+      Handler: index.handler
+      MemorySize: 512
+      Timeout: 300
+      Role: !GetAtt BootstrapRole.Arn
+      LoggingConfig: { LogGroup: !Ref BootstrapLogGroup }
+      Code:
+        ZipFile: |
+          import hashlib, json, urllib.request, boto3
+          s3 = boto3.client('s3')
+          # cfnresponse is not provided for every runtime, so answer CloudFormation directly.
+          def respond(event, ok, physical, reason=''):
+              body = json.dumps({'Status': 'SUCCESS' if ok else 'FAILED', 'Reason': reason or 'See CloudWatch Logs',
+                  'PhysicalResourceId': physical, 'StackId': event['StackId'], 'RequestId': event['RequestId'],
+                  'LogicalResourceId': event['LogicalResourceId'], 'Data': {}}).encode()
+              req = urllib.request.Request(event['ResponseURL'], data=body, method='PUT', headers={'Content-Type': ''})
+              urllib.request.urlopen(req, timeout=30).read()
+          def handler(event, context):
+              props = event['ResourceProperties']
+              bucket = props['Bucket']
+              physical = 'artifacts-' + bucket
+              try:
+                  if event['RequestType'] == 'Delete':
+                      for page in s3.get_paginator('list_objects_v2').paginate(Bucket=bucket):
+                          keys = [{'Key': o['Key']} for o in page.get('Contents', [])]
+                          if keys:
+                              s3.delete_objects(Bucket=bucket, Delete={'Objects': keys, 'Quiet': True})
+                  else:
+                      base = props['BaseUrl'].rstrip('/')
+                      if not base.startswith('https://'):
+                          raise ValueError('ArtifactBaseUrl must start with https://')
+                      for a in props['Artifacts']:
+                          url = base + '/' + a['Name']
+                          with urllib.request.urlopen(url, timeout=120) as r:
+                              body = r.read()
+                          digest = hashlib.sha256(body).hexdigest()
+                          if digest != a['Sha256']:
+                              raise ValueError('Checksum mismatch for %s: expected %s, got %s' % (url, a['Sha256'], digest))
+                          s3.put_object(Bucket=bucket, Key=a['Key'], Body=body)
+                          print('Copied %s (%d bytes, sha256 %s)' % (url, len(body), digest))
+                  respond(event, True, physical)
+              except Exception as e:
+                  print('Error: %s' % e)
+                  # A failed cleanup must not wedge stack deletion.
+                  respond(event, event['RequestType'] == 'Delete', physical, str(e)[:400])
+
+  Bootstrap:
+    Type: Custom::S3ndlessArtifacts
+    DependsOn: [ArtifactsBucketPolicy]
+    Properties:
+      ServiceToken: !GetAtt BootstrapFunction.Arn
+      ServiceTimeout: 600
+      Bucket: !Ref ArtifactsBucket
+      BaseUrl: !Ref ArtifactBaseUrl
+      Artifacts:
+        - Name: backend.zip
+          Key: !Sub ['v${Version}/backend.zip', { Version: !FindInMap [Release, Current, Version] }]
+          Sha256: !FindInMap [Release, Current, BackendSha256]
+        - Name: web.zip
+          Key: !Sub ['v${Version}/web.zip', { Version: !FindInMap [Release, Current, Version] }]
+          Sha256: !FindInMap [Release, Current, WebSha256]
+
+  # ---------------------------------------------------------------------------
+  # Data
+  # ---------------------------------------------------------------------------
+  Table:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: PK, AttributeType: S }
+        - { AttributeName: SK, AttributeType: S }
+        - { AttributeName: GSI1PK, AttributeType: S }
+        - { AttributeName: GSI1SK, AttributeType: S }
+        - { AttributeName: GSI2PK, AttributeType: S }
+        - { AttributeName: GSI2SK, AttributeType: S }
+        - { AttributeName: GSI3PK, AttributeType: S }
+        - { AttributeName: GSI3SK, AttributeType: S }
+      KeySchema:
+        - { AttributeName: PK, KeyType: HASH }
+        - { AttributeName: SK, KeyType: RANGE }
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - { AttributeName: GSI1PK, KeyType: HASH }
+            - { AttributeName: GSI1SK, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+        - IndexName: GSI2
+          KeySchema:
+            - { AttributeName: GSI2PK, KeyType: HASH }
+            - { AttributeName: GSI2SK, KeyType: RANGE }
+          Projection: { ProjectionType: ALL }
+        - IndexName: GSI3
+          KeySchema:
+            - { AttributeName: GSI3PK, KeyType: HASH }
+            - { AttributeName: GSI3SK, KeyType: RANGE }
+          Projection: { ProjectionType: KEYS_ONLY }
+      TimeToLiveSpecification: { AttributeName: ttl, Enabled: true }
+      PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+
+  # Files live under files/<transferId>/<fileId>. The name is derived from the stack, not referenced,
+  # so the API function and the CSP can use it without creating a dependency cycle through CloudFront.
+  FilesBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub
+        - 's3ndless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}'
+        - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules: [{ ObjectOwnership: BucketOwnerEnforced }]
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: !If
+              - HasCustomDomain
+              - [!Sub 'https://${CustomDomainName}', !Sub 'https://${Distribution.DomainName}']
+              - [!Sub 'https://${Distribution.DomainName}']
+            AllowedMethods: [PUT, GET, HEAD]
+            AllowedHeaders: ['*']
+            ExposedHeaders: [ETag]
+            MaxAge: 3600
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-files
+            Status: Enabled
+            Prefix: files/
+            ExpirationInDays: !FindInMap [Lifecycle, !Ref MaxRetentionDays, Days]
+          - Id: abort-incomplete-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload: { DaysAfterInitiation: 2 }
+      NotificationConfiguration: !If
+        - MalwareScanning
+        - EventBridgeConfiguration: { EventBridgeEnabled: true }
+        - !Ref AWS::NoValue
+
+  FilesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FilesBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: [!GetAtt FilesBucket.Arn, !Sub '${FilesBucket.Arn}/*']
+            Condition: { Bool: { 'aws:SecureTransport': 'false' } }
+
+  WebBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules: [{ ObjectOwnership: BucketOwnerEnforced }]
+
+  WebBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFront
+            Effect: Allow
+            Principal: { Service: cloudfront.amazonaws.com }
+            Action: s3:GetObject
+            Resource: !Sub '${WebBucket.Arn}/*'
+            Condition:
+              StringEquals:
+                'AWS:SourceArn': !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource: [!GetAtt WebBucket.Arn, !Sub '${WebBucket.Arn}/*']
+            Condition: { Bool: { 'aws:SecureTransport': 'false' } }
+
+  # ---------------------------------------------------------------------------
+  # API: one Lambda behind a function URL that only this CloudFront distribution may call.
+  # ---------------------------------------------------------------------------
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/api'
+      RetentionInDays: !Ref LogRetentionDays
+
+  ApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: api
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ApiLogGroup.Arn
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:Query, dynamodb:BatchGetItem]
+                Resource: [!GetAtt Table.Arn, !Sub '${Table.Arn}/index/*']
+              - Effect: Allow
+                Action: [s3:PutObject, s3:GetObject, s3:DeleteObject, s3:AbortMultipartUpload, s3:ListMultipartUploadParts]
+                Resource: !Sub
+                  - 'arn:${AWS::Partition}:s3:::s3ndless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}/files/*'
+                  - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+              - !If
+                - HasSenderEmail
+                - Effect: Allow
+                  Action: ses:SendEmail
+                  Resource: '*'
+                  Condition: { StringEquals: { 'ses:FromAddress': !Ref SenderEmail } }
+                - !Ref AWS::NoValue
+
+  # Attached separately so the API function does not depend on the user pool (which depends on CloudFront).
+  ApiCognitoPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: cognito
+      Roles: [!Ref ApiRole]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - cognito-idp:ListUsers
+              - cognito-idp:ListUsersInGroup
+              - cognito-idp:AdminCreateUser
+              - cognito-idp:AdminAddUserToGroup
+              - cognito-idp:AdminRemoveUserFromGroup
+              - cognito-idp:AdminEnableUser
+              - cognito-idp:AdminDisableUser
+              - cognito-idp:AdminUserGlobalSignOut
+              - cognito-idp:AdminDeleteUser
+              # Pro: SSO identity providers
+              - cognito-idp:ListIdentityProviders
+              - cognito-idp:DescribeIdentityProvider
+              - cognito-idp:CreateIdentityProvider
+              - cognito-idp:DeleteIdentityProvider
+              - cognito-idp:DescribeUserPoolClient
+              - cognito-idp:UpdateUserPoolClient
+            Resource: !GetAtt UserPool.Arn
+
+  ApiFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: [Bootstrap]
+    Properties:
+      Description: S3ndless - HTTP API
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      Handler: api.handler
+      MemorySize: 1024
+      Timeout: 30
+      Role: !GetAtt ApiRole.Arn
+      LoggingConfig: { LogGroup: !Ref ApiLogGroup }
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: !Sub ['v${Version}/backend.zip', { Version: !FindInMap [Release, Current, Version] }]
+      Environment:
+        Variables:
+          APP_VERSION: !FindInMap [Release, Current, Version]
+          TABLE_NAME: !Ref Table
+          FILES_BUCKET: !Sub
+            - 's3ndless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}'
+            - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+          MAX_RETENTION_DAYS: !Ref MaxRetentionDays
+          MALWARE_SCANNING: !Ref EnableMalwareScanning
+          SENDER_EMAIL: !If [HasSenderEmail, !Ref SenderEmail, !Ref AWS::NoValue]
+          NODE_OPTIONS: --enable-source-maps
+
+  ApiFunctionUrl:
+    Type: AWS::Lambda::Url
+    Properties:
+      TargetFunctionArn: !GetAtt ApiFunction.Arn
+      AuthType: AWS_IAM
+      InvokeMode: BUFFERED
+
+  ApiUrlPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ApiFunction
+      Action: lambda:InvokeFunctionUrl
+      Principal: cloudfront.amazonaws.com
+      FunctionUrlAuthType: AWS_IAM
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+
+  ApiInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref ApiFunction
+      Action: lambda:InvokeFunction
+      Principal: cloudfront.amazonaws.com
+      SourceArn: !Sub 'arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}'
+
+  # ---------------------------------------------------------------------------
+  # CloudFront: web app from S3, /api/* to the function URL. No Lambda@Edge.
+  # ---------------------------------------------------------------------------
+  WebOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub
+          - 's3ndless-${Suffix}-web'
+          - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+        Description: S3ndless web bucket
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  ApiOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Sub
+          - 's3ndless-${Suffix}-api'
+          - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+        Description: S3ndless API function URL
+        OriginAccessControlOriginType: lambda
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  SpaRoutingFunction:
+    Type: AWS::CloudFront::Function
+    Properties:
+      Name: !Sub
+        - 's3ndless-${Suffix}-spa'
+        - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+      AutoPublish: true
+      FunctionConfig:
+        Comment: Serve index.html for client-side routes
+        Runtime: cloudfront-js-2.0
+      FunctionCode: |
+        function handler(event) {
+          var request = event.request;
+          var last = request.uri.substring(request.uri.lastIndexOf('/') + 1);
+          if (last.indexOf('.') === -1) {
+            request.uri = '/index.html';
+          }
+          return request;
+        }
+
+  ApiOriginRequestPolicy:
+    Type: AWS::CloudFront::OriginRequestPolicy
+    Properties:
+      OriginRequestPolicyConfig:
+        Name: !Sub
+          - 's3ndless-${Suffix}-api'
+          - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+        # Never Host (must stay the function URL's). x-amz-content-sha256 is not listed: CloudFront
+        # rejects it here and uses it for the OAC signature on its own.
+        Comment: Headers the S3ndless API needs
+        HeadersConfig:
+          HeaderBehavior: whitelist
+          Headers:
+            - content-type
+            - x-s3ndless-token
+            - user-agent
+            - accept-language
+            - CloudFront-Viewer-Address
+            - CloudFront-Viewer-Country
+        QueryStringsConfig: { QueryStringBehavior: all }
+        CookiesConfig: { CookieBehavior: none }
+
+  SecurityHeadersPolicy:
+    Type: AWS::CloudFront::ResponseHeadersPolicy
+    Properties:
+      ResponseHeadersPolicyConfig:
+        Name: !Sub
+          - 's3ndless-${Suffix}-security'
+          - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+        Comment: S3ndless security headers
+        SecurityHeadersConfig:
+          StrictTransportSecurity: { AccessControlMaxAgeSec: 31536000, Override: true }
+          ContentTypeOptions: { Override: true }
+          FrameOptions: { FrameOption: DENY, Override: true }
+          ReferrerPolicy: { ReferrerPolicy: no-referrer, Override: true }
+          ContentSecurityPolicy:
+            Override: true
+            ContentSecurityPolicy: !Sub
+              - >-
+                default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;
+                font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';
+                connect-src 'self' https://${Bucket}.s3.${AWS::Region}.${AWS::URLSuffix} https://${Bucket}.s3.${AWS::URLSuffix}
+                https://s3ndless-${AWS::AccountId}-${Suffix}.auth.${AWS::Region}.amazoncognito.com
+                https://cognito-idp.${AWS::Region}.${AWS::URLSuffix}
+              - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+                Bucket: !Sub
+                  - 's3ndless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}'
+                  - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+        CustomHeadersConfig:
+          Items:
+            - Header: Permissions-Policy
+              Value: camera=(), microphone=(), geolocation=(), interest-cohort=()
+              Override: true
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Metadata:
+      cfn-lint:
+        config:
+          # CertificateArn may be '' by default, but it is only used when HasCustomDomain is true.
+          ignore_checks: [W1030]
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub 'S3ndless (${AWS::StackName})'
+        HttpVersion: http2and3
+        IPV6Enabled: true
+        PriceClass: !Ref CloudFrontPriceClass
+        DefaultRootObject: index.html
+        Aliases: !If [HasCustomDomain, [!Ref CustomDomainName], !Ref AWS::NoValue]
+        ViewerCertificate: !If
+          - HasCustomDomain
+          - AcmCertificateArn: !Ref CertificateArn
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2021
+          - CloudFrontDefaultCertificate: true
+        Origins:
+          - Id: web
+            DomainName: !GetAtt WebBucket.RegionalDomainName
+            S3OriginConfig: { OriginAccessIdentity: '' }
+            OriginAccessControlId: !Ref WebOriginAccessControl
+          - Id: api
+            DomainName: !Select [2, !Split ['/', !GetAtt ApiFunctionUrl.FunctionUrl]]
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols: [TLSv1.2]
+            OriginAccessControlId: !Ref ApiOriginAccessControl
+        DefaultCacheBehavior:
+          TargetOriginId: web
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
+          ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+          FunctionAssociations:
+            - EventType: viewer-request
+              FunctionARN: !GetAtt SpaRoutingFunction.FunctionARN
+        CacheBehaviors:
+          - PathPattern: /api/*
+            TargetOriginId: api
+            ViewerProtocolPolicy: https-only
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, PATCH, POST, DELETE]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # Managed-CachingDisabled
+            OriginRequestPolicyId: !Ref ApiOriginRequestPolicy
+            ResponseHeadersPolicyId: !Ref SecurityHeadersPolicy
+
+  # ---------------------------------------------------------------------------
+  # Sign-in: Cognito user pool with managed login (OAuth2 code + PKCE from the SPA).
+  # ---------------------------------------------------------------------------
+  PreSignUpLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: HasSelfSignUp
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/pre-signup'
+      RetentionInDays: !Ref LogRetentionDays
+
+  PreSignUpRole:
+    Type: AWS::IAM::Role
+    Condition: HasSelfSignUp
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: logs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt PreSignUpLogGroup.Arn
+
+  PreSignUpFunction:
+    Type: AWS::Lambda::Function
+    Condition: HasSelfSignUp
+    DependsOn: [Bootstrap]
+    Properties:
+      Description: S3ndless - restricts self sign-up to approved email domains
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      Handler: pre-signup.handler
+      MemorySize: 256
+      Timeout: 5
+      Role: !GetAtt PreSignUpRole.Arn
+      LoggingConfig: { LogGroup: !Ref PreSignUpLogGroup }
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: !Sub ['v${Version}/backend.zip', { Version: !FindInMap [Release, Current, Version] }]
+      Environment:
+        Variables:
+          ALLOWED_SIGNUP_DOMAINS: !Ref SelfSignUpDomains
+
+  PreSignUpPermission:
+    Type: AWS::Lambda::Permission
+    Condition: HasSelfSignUp
+    Properties:
+      FunctionName: !Ref PreSignUpFunction
+      Action: lambda:InvokeFunction
+      Principal: cognito-idp.amazonaws.com
+      SourceArn: !GetAtt UserPool.Arn
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub 's3ndless-${AWS::StackName}'
+      UserPoolTier: ESSENTIALS
+      DeletionProtection: INACTIVE
+      UsernameAttributes: [email]
+      UsernameConfiguration: { CaseSensitive: false }
+      AutoVerifiedAttributes: [email]
+      Schema:
+        - { Name: email, AttributeDataType: String, Required: true, Mutable: true }
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          TemporaryPasswordValidityDays: 7
+      MfaConfiguration: 'OPTIONAL'
+      EnabledMfas: [SOFTWARE_TOKEN_MFA]
+      AccountRecoverySetting:
+        RecoveryMechanisms: [{ Name: verified_email, Priority: 1 }]
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: !If [HasSelfSignUp, false, true]
+        InviteMessageTemplate:
+          EmailSubject: Your S3ndless account
+          EmailMessage: !Sub
+            - >-
+              You have been invited to S3ndless at ${AppUrl}<br><br>Username: {username}<br>Temporary password: {####}<br><br>You
+              will be asked to choose a new password when you sign in for the first time.
+            - AppUrl: !If [HasCustomDomain, !Sub 'https://${CustomDomainName}', !Sub 'https://${Distribution.DomainName}']
+      LambdaConfig: !If
+        - HasSelfSignUp
+        - PreSignUp: !GetAtt PreSignUpFunction.Arn
+        - !Ref AWS::NoValue
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: web
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes: [openid, email, profile]
+      CallbackURLs: !If
+        - HasCustomDomain
+        - [!Sub 'https://${CustomDomainName}/auth/callback', !Sub 'https://${Distribution.DomainName}/auth/callback']
+        - [!Sub 'https://${Distribution.DomainName}/auth/callback']
+      LogoutURLs: !If
+        - HasCustomDomain
+        - [!Sub 'https://${CustomDomainName}/', !Sub 'https://${Distribution.DomainName}/']
+        - [!Sub 'https://${Distribution.DomainName}/']
+      SupportedIdentityProviders: [COGNITO]
+      ExplicitAuthFlows: [ALLOW_REFRESH_TOKEN_AUTH, ALLOW_USER_SRP_AUTH]
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      IdTokenValidity: 60
+      AccessTokenValidity: 60
+      RefreshTokenValidity: 30
+      TokenValidityUnits: { IdToken: minutes, AccessToken: minutes, RefreshToken: days }
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      Domain: !Sub
+        - 's3ndless-${AWS::AccountId}-${Suffix}'
+        - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
+      ManagedLoginVersion: 2
+
+  ManagedLoginBranding:
+    Type: AWS::Cognito::ManagedLoginBranding
+    DependsOn: [UserPoolDomain]
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientId: !Ref UserPoolClient
+      UseCognitoProvidedValues: true
+
+  AdminsGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      UserPoolId: !Ref UserPool
+      GroupName: admins
+      Description: S3ndless administrators
+
+  AdminUser:
+    Type: AWS::Cognito::UserPoolUser
+    Properties:
+      UserPoolId: !Ref UserPool
+      Username: !Ref AdminEmail
+      DesiredDeliveryMediums: [EMAIL]
+      UserAttributes:
+        - { Name: email, Value: !Ref AdminEmail }
+        - { Name: email_verified, Value: 'true' }
+
+  AdminMembership:
+    Type: AWS::Cognito::UserPoolUserToGroupAttachment
+    Properties:
+      UserPoolId: !Ref UserPool
+      GroupName: !Ref AdminsGroup
+      Username: !Ref AdminUser
+
+  # ---------------------------------------------------------------------------
+  # Setup: runs last. Publishes the web app and records deploy-time configuration.
+  # On stack deletion it runs first and empties the buckets.
+  # ---------------------------------------------------------------------------
+  SetupLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/setup'
+      RetentionInDays: !Ref LogRetentionDays
+
+  SetupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: setup
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt SetupLogGroup.Arn
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub '${ArtifactsBucket.Arn}/*'
+              - Effect: Allow
+                Action: [s3:PutObject, s3:DeleteObject]
+                Resource: !Sub '${WebBucket.Arn}/*'
+              - Effect: Allow
+                Action: [s3:DeleteObject, s3:AbortMultipartUpload]
+                Resource: !Sub '${FilesBucket.Arn}/*'
+              - Effect: Allow
+                Action: [s3:ListBucket, s3:ListBucketMultipartUploads]
+                Resource: [!GetAtt WebBucket.Arn, !GetAtt FilesBucket.Arn]
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem]
+                Resource: !GetAtt Table.Arn
+              - Effect: Allow
+                Action:
+                  - cognito-idp:ListIdentityProviders
+                  - cognito-idp:DescribeIdentityProvider
+                  - cognito-idp:DescribeUserPoolClient
+                  - cognito-idp:UpdateUserPoolClient
+                Resource: !GetAtt UserPool.Arn
+
+  SetupFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: [Bootstrap]
+    Properties:
+      Description: S3ndless - deploy-time setup (custom resource)
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      Handler: setup.handler
+      MemorySize: 1024
+      Timeout: 900
+      Role: !GetAtt SetupRole.Arn
+      LoggingConfig: { LogGroup: !Ref SetupLogGroup }
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: !Sub ['v${Version}/backend.zip', { Version: !FindInMap [Release, Current, Version] }]
+      Environment:
+        Variables:
+          APP_VERSION: !FindInMap [Release, Current, Version]
+          TABLE_NAME: !Ref Table
+          FILES_BUCKET: !Ref FilesBucket
+          MAX_RETENTION_DAYS: !Ref MaxRetentionDays
+
+  Setup:
+    Type: Custom::S3ndlessSetup
+    DependsOn: [ManagedLoginBranding, AdminMembership, FilesBucketPolicy, WebBucketPolicy]
+    Properties:
+      ServiceToken: !GetAtt SetupFunction.Arn
+      ServiceTimeout: 960
+      Version: !FindInMap [Release, Current, Version]
+      ArtifactsBucket: !Ref ArtifactsBucket
+      WebArtifactKey: !Sub ['v${Version}/web.zip', { Version: !FindInMap [Release, Current, Version] }]
+      WebBucket: !Ref WebBucket
+      FilesBucket: !Ref FilesBucket
+      AppUrl: !If [HasCustomDomain, !Sub 'https://${CustomDomainName}', !Sub 'https://${Distribution.DomainName}']
+      UserPoolId: !Ref UserPool
+      ClientId: !Ref UserPoolClient
+      CognitoDomain: !Sub '${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com'
+      SelfSignUp: !If [HasSelfSignUp, 'true', 'false']
+
+  # ---------------------------------------------------------------------------
+  # Sweeper: deletes expired files every 15 minutes.
+  # ---------------------------------------------------------------------------
+  SweeperLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/sweeper'
+      RetentionInDays: !Ref LogRetentionDays
+
+  SweeperRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: sweeper
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt SweeperLogGroup.Arn
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem, dynamodb:Query]
+                Resource: [!GetAtt Table.Arn, !Sub '${Table.Arn}/index/*']
+              - Effect: Allow
+                Action: [s3:DeleteObject, s3:AbortMultipartUpload]
+                Resource: !Sub '${FilesBucket.Arn}/files/*'
+
+  SweeperFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: [Bootstrap]
+    Properties:
+      Description: S3ndless - deletes expired transfers
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      Handler: sweeper.handler
+      MemorySize: 512
+      Timeout: 300
+      Role: !GetAtt SweeperRole.Arn
+      LoggingConfig: { LogGroup: !Ref SweeperLogGroup }
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: !Sub ['v${Version}/backend.zip', { Version: !FindInMap [Release, Current, Version] }]
+      Environment:
+        Variables:
+          APP_VERSION: !FindInMap [Release, Current, Version]
+          TABLE_NAME: !Ref Table
+          FILES_BUCKET: !Ref FilesBucket
+          MAX_RETENTION_DAYS: !Ref MaxRetentionDays
+          NODE_OPTIONS: --enable-source-maps
+
+  SweeperSchedule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: S3ndless - run the sweeper
+      ScheduleExpression: rate(15 minutes)
+      State: ENABLED
+      Targets:
+        - Id: sweeper
+          Arn: !GetAtt SweeperFunction.Arn
+
+  SweeperPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref SweeperFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt SweeperSchedule.Arn
+
+  # ---------------------------------------------------------------------------
+  # Pro: GuardDuty Malware Protection for S3 (only with EnableMalwareScanning=true).
+  # ---------------------------------------------------------------------------
+  MalwareProtectionRole:
+    Type: AWS::IAM::Role
+    Condition: MalwareScanning
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: malware-protection-plan.guardduty.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: malware-protection
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowManagedRuleToSendS3EventsToGuardDuty
+                Effect: Allow
+                Action: [events:PutRule, events:DeleteRule, events:PutTargets, events:RemoveTargets]
+                Resource: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/DO-NOT-DELETE-AmazonGuardDutyMalwareProtectionS3*'
+                Condition: { StringLike: { 'events:ManagedBy': malware-protection-plan.guardduty.amazonaws.com } }
+              - Sid: AllowGuardDutyToMonitorEventBridgeManagedRule
+                Effect: Allow
+                Action: [events:DescribeRule, events:ListTargetsByRule]
+                Resource: !Sub 'arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:rule/DO-NOT-DELETE-AmazonGuardDutyMalwareProtectionS3*'
+              - Sid: AllowPostScanTag
+                Effect: Allow
+                Action: [s3:PutObjectTagging, s3:GetObjectTagging, s3:PutObjectVersionTagging, s3:GetObjectVersionTagging]
+                Resource: !Sub '${FilesBucket.Arn}/*'
+              - Sid: AllowEnableS3EventBridgeEvents
+                Effect: Allow
+                Action: [s3:PutBucketNotification, s3:GetBucketNotification]
+                Resource: !GetAtt FilesBucket.Arn
+              - Sid: AllowPutValidationObject
+                Effect: Allow
+                Action: s3:PutObject
+                Resource: !Sub '${FilesBucket.Arn}/malware-protection-resource-validation-object'
+              - Sid: AllowCheckBucketOwnership
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource: !GetAtt FilesBucket.Arn
+              - Sid: AllowMalwareScan
+                Effect: Allow
+                Action: [s3:GetObject, s3:GetObjectVersion]
+                Resource: !Sub '${FilesBucket.Arn}/*'
+
+  MalwareProtectionPlan:
+    Type: AWS::GuardDuty::MalwareProtectionPlan
+    Condition: MalwareScanning
+    DependsOn: [FilesBucketPolicy]
+    Properties:
+      Role: !GetAtt MalwareProtectionRole.Arn
+      ProtectedResource:
+        S3Bucket:
+          BucketName: !Ref FilesBucket
+          ObjectPrefixes: [files/]
+      Actions:
+        Tagging: { Status: ENABLED }
+
+  ScanResultLogGroup:
+    Type: AWS::Logs::LogGroup
+    Condition: MalwareScanning
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/scan-result'
+      RetentionInDays: !Ref LogRetentionDays
+
+  ScanResultRole:
+    Type: AWS::IAM::Role
+    Condition: MalwareScanning
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: lambda.amazonaws.com }
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: scan-result
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !GetAtt ScanResultLogGroup.Arn
+              - Effect: Allow
+                Action: [dynamodb:GetItem, dynamodb:PutItem, dynamodb:UpdateItem]
+                Resource: !GetAtt Table.Arn
+              - Effect: Allow
+                Action: s3:DeleteObject
+                Resource: !Sub '${FilesBucket.Arn}/files/*'
+
+  ScanResultFunction:
+    Type: AWS::Lambda::Function
+    Condition: MalwareScanning
+    DependsOn: [Bootstrap]
+    Properties:
+      Description: S3ndless Pro - records GuardDuty scan results
+      Runtime: nodejs22.x
+      Architectures: [arm64]
+      Handler: scan-result.handler
+      MemorySize: 256
+      Timeout: 30
+      Role: !GetAtt ScanResultRole.Arn
+      LoggingConfig: { LogGroup: !Ref ScanResultLogGroup }
+      Code:
+        S3Bucket: !Ref ArtifactsBucket
+        S3Key: !Sub ['v${Version}/backend.zip', { Version: !FindInMap [Release, Current, Version] }]
+      Environment:
+        Variables:
+          APP_VERSION: !FindInMap [Release, Current, Version]
+          TABLE_NAME: !Ref Table
+          FILES_BUCKET: !Ref FilesBucket
+          MAX_RETENTION_DAYS: !Ref MaxRetentionDays
+          MALWARE_SCANNING: 'true'
+
+  ScanResultRule:
+    Type: AWS::Events::Rule
+    Condition: MalwareScanning
+    Properties:
+      Description: S3ndless Pro - GuardDuty scan results for the files bucket
+      EventPattern:
+        source: [aws.guardduty]
+        detail-type: [GuardDuty Malware Protection Object Scan Result]
+        detail:
+          s3ObjectDetails:
+            bucketName: [!Ref FilesBucket]
+      Targets:
+        - Id: scan-result
+          Arn: !GetAtt ScanResultFunction.Arn
+
+  ScanResultPermission:
+    Type: AWS::Lambda::Permission
+    Condition: MalwareScanning
+    Properties:
+      FunctionName: !Ref ScanResultFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ScanResultRule.Arn
+
+Outputs:
+  AppUrl:
+    Description: Open this URL and sign in with the administrator email (temporary password arrives by email).
+    Value: !If [HasCustomDomain, !Sub 'https://${CustomDomainName}', !Sub 'https://${Distribution.DomainName}']
+  CloudFrontDomain:
+    Description: For a custom domain, create a CNAME record pointing to this name.
+    Value: !GetAtt Distribution.DomainName
+  FilesBucket:
+    Description: Where uploaded files are stored (encrypted, private, lifecycle-limited).
+    Value: !Ref FilesBucket
+  UserPoolId:
+    Description: Cognito user pool for sign-in.
+    Value: !Ref UserPool
+  Version:
+    Value: !FindInMap [Release, Current, Version]
