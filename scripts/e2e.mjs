@@ -106,34 +106,40 @@ async function objectExists(key) {
   }
 }
 
-// ---------- test user ----------
-const email = `e2e-${randomBytes(4).toString('hex')}@example.com`;
-const password = `E2e-${randomBytes(12).toString('base64url')}-a1A`;
-await idp.send(
-  new AdminCreateUserCommand({
-    UserPoolId: physical.UserPool,
-    Username: email,
-    MessageAction: 'SUPPRESS',
-    TemporaryPassword: password,
-    UserAttributes: [
-      { Name: 'email', Value: email },
-      { Name: 'email_verified', Value: 'true' },
-    ],
-  }),
-);
-await idp.send(new AdminSetUserPasswordCommand({ UserPoolId: physical.UserPool, Username: email, Password: password, Permanent: true }));
-await idp.send(new AdminAddUserToGroupCommand({ UserPoolId: physical.UserPool, Username: email, GroupName: 'admins' }));
+// ---------- test users ----------
+const newPassword = () => `E2e-${randomBytes(12).toString('base64url')}-a1A`;
 
-function signIn() {
+async function createUser(address, pass, admin) {
+  await idp.send(
+    new AdminCreateUserCommand({
+      UserPoolId: physical.UserPool,
+      Username: address,
+      MessageAction: 'SUPPRESS',
+      TemporaryPassword: pass,
+      UserAttributes: [
+        { Name: 'email', Value: address },
+        { Name: 'email_verified', Value: 'true' },
+      ],
+    }),
+  );
+  await idp.send(new AdminSetUserPasswordCommand({ UserPoolId: physical.UserPool, Username: address, Password: pass, Permanent: true }));
+  if (admin) await idp.send(new AdminAddUserToGroupCommand({ UserPoolId: physical.UserPool, Username: address, GroupName: 'admins' }));
+}
+
+function signIn(address = email, pass = password) {
   const pool = new cognito.CognitoUserPool({ UserPoolId: physical.UserPool, ClientId: physical.UserPoolClient });
-  const user = new cognito.CognitoUser({ Username: email, Pool: pool });
+  const user = new cognito.CognitoUser({ Username: address, Pool: pool });
   return new Promise((resolve, reject) =>
-    user.authenticateUser(new cognito.AuthenticationDetails({ Username: email, Password: password }), {
+    user.authenticateUser(new cognito.AuthenticationDetails({ Username: address, Password: pass }), {
       onSuccess: (session) => resolve(session.getIdToken().getJwtToken()),
       onFailure: reject,
     }),
   );
 }
+
+const email = `e2e-${randomBytes(4).toString('hex')}@example.com`;
+const password = newPassword();
+await createUser(email, password, true);
 
 // EICAR anti-virus test string, assembled at runtime so this file itself never looks like malware.
 const eicar = Buffer.from(['X5O!P%@AP[4\\PZX54(P^)7CC)7}$', 'EICAR-STANDARD-ANTIVIRUS-', 'TEST-FILE!$H+H*'].join(''));
@@ -316,6 +322,34 @@ try {
     const res = await call('GET', '/api/admin/users');
     assert(res.status === 200 && res.json.items.some((u) => u.email === email && u.isAdmin), JSON.stringify(res.json).slice(0, 200));
     return `${res.json.items.length} users`;
+  });
+  await check('deleting a user closes their links and deletes their files', async () => {
+    const memberEmail = `e2e-member-${randomBytes(4).toString('hex')}@example.com`;
+    const memberPassword = newPassword();
+    await createUser(memberEmail, memberPassword, false);
+    const adminToken = token;
+    token = await signIn(memberEmail, memberPassword);
+    const created = await call('POST', '/api/transfers', { files: [{ name: 'member.txt', size: small.length }], expiresInHours: 24, maxOpens: null });
+    const { url } = await upload(created.json.upload, [small]);
+    const transferId = created.json.upload.transferId;
+    const key = `files/${transferId}/${created.json.upload.files[0].id}`;
+    const request = await call('POST', '/api/requests', {
+      title: 'Member request',
+      expiresInHours: 24,
+      maxSubmissions: null,
+      maxBytesPerSubmission: null,
+      retentionHours: 24,
+      notifyOnSubmission: false,
+    });
+    assert(url && request.status === 201 && (await objectExists(key)), 'setup failed');
+    token = adminToken;
+
+    const member = (await call('GET', '/api/admin/users')).json.items.find((u) => u.email === memberEmail);
+    const deleted = await call('DELETE', `/api/admin/users/${encodeURIComponent(member.username)}`);
+    assert(deleted.status === 204, `delete ${deleted.status} ${JSON.stringify(deleted.json)}`);
+    assert((await call('GET', `/api/public/transfers/${transferId}`, undefined, { auth: false })).status === 410, 'transfer still open');
+    assert((await call('GET', `/api/public/requests/${request.json.id}`, undefined, { auth: false })).status === 410, 'request still open');
+    assert(!(await objectExists(key)), 'member file still in S3');
   });
   await check('Pro endpoints are gated without a license', async () => {
     const res = await call('GET', '/api/admin/audit');
