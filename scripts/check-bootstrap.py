@@ -1,4 +1,4 @@
-"""Checks the inline Python bootstrap in template/s3ndless.yaml.
+"""Checks the inline Python bootstrap in template/sendless.yaml.
 
 Inline Lambda code is limited to 4096 characters, and if it fails to answer CloudFormation the
 stack hangs until the custom resource times out. This test extracts the code, runs it against a
@@ -13,7 +13,7 @@ import sys
 import threading
 import types
 
-source = open('template/s3ndless.yaml', encoding='utf-8').read()
+source = open('template/sendless.yaml', encoding='utf-8').read()
 match = re.search(r'ZipFile: \|\n((?:          .*\n|\n)+)', source)
 assert match, 'inline bootstrap not found'
 code = '\n'.join(line[10:] for line in match.group(1).splitlines())

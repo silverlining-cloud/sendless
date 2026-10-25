@@ -1,11 +1,11 @@
-// Issues a signed S3ndless Pro license key.
-//   npm run license:issue -- --kid s3ndless-2026-1 --licensee "Acme GmbH" --days 365 [--features sso,audit]
+// Issues a signed Sendless Pro license key.
+//   npm run license:issue -- --kid sendless-2026-1 --licensee "Acme GmbH" --days 365 [--features sso,audit]
 import { createPrivateKey, randomUUID, sign } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { PRO_FEATURES } from '@s3ndless/shared';
+import { PRO_FEATURES } from '@sendless/shared';
 import { LICENSE_TYPE, licensePayloadSchema } from '../api/license.js';
 
 const { values } = parseArgs({
@@ -24,7 +24,7 @@ if (!values.kid || !values.licensee) {
 
 const now = Math.floor(Date.now() / 1000);
 const payload = licensePayloadSchema.parse({
-  iss: 's3ndless',
+  iss: 'sendless',
   lid: randomUUID(),
   licensee: values.licensee,
   edition: 'pro',
@@ -32,7 +32,7 @@ const payload = licensePayloadSchema.parse({
   iat: now,
   exp: now + Number(values.days) * 86_400,
 });
-const keyFile = values.key ?? path.join(homedir(), '.s3ndless', `${values.kid}.private.pem`);
+const keyFile = values.key ?? path.join(homedir(), '.sendless', `${values.kid}.private.pem`);
 const privateKey = createPrivateKey(readFileSync(keyFile));
 
 const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');

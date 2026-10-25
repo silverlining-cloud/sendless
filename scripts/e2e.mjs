@@ -1,6 +1,6 @@
-// End-to-end test against a deployed S3ndless stack.
+// End-to-end test against a deployed Sendless stack.
 //
-//   node scripts/e2e.mjs --stack s3ndless-test --region eu-central-1 [--keep]
+//   node scripts/e2e.mjs --stack sendless-test --region eu-central-1 [--keep]
 //
 // Needs AWS credentials for the stack's account. Creates a temporary admin user (deleted at the end
 // unless --keep), signs in with Cognito SRP, and exercises the API, S3 uploads/downloads, malware
@@ -61,14 +61,14 @@ const { StackResources } = await cfn.send(new DescribeStackResourcesCommand({ St
 const physical = Object.fromEntries(StackResources.map((r) => [r.LogicalResourceId, r.PhysicalResourceId]));
 const appUrl = outputs.AppUrl;
 const malwareScanning = Boolean(physical.MalwareProtectionPlan);
-console.log(`S3ndless e2e — ${appUrl} (version ${outputs.Version}, ${region}, malware scanning ${malwareScanning ? 'on' : 'off'})\n`);
+console.log(`Sendless e2e — ${appUrl} (version ${outputs.Version}, ${region}, malware scanning ${malwareScanning ? 'on' : 'off'})\n`);
 
 let token = null;
 async function call(method, path, body, { auth = true, raw = false } = {}) {
   const payload = body === undefined ? undefined : JSON.stringify(body);
   const headers = { 'content-type': 'application/json' };
   if (method !== 'GET') headers['x-amz-content-sha256'] = sha256(payload ?? '');
-  if (auth && token) headers['x-s3ndless-token'] = token;
+  if (auth && token) headers['x-sendless-token'] = token;
   const res = await fetch(`${appUrl}${path}`, { method, headers, body: payload });
   if (raw) return res;
   const text = await res.text();
@@ -185,7 +185,7 @@ try {
 
   console.log('\nTransfers');
   const big = randomBytes(20 * 1024 * 1024 + 12345);
-  const small = Buffer.from('Hello from the S3ndless end-to-end test.\n'.repeat(100));
+  const small = Buffer.from('Hello from the Sendless end-to-end test.\n'.repeat(100));
   let transfer;
   await check('create transfer and upload 3 files directly to S3 (multipart)', async () => {
     const files = [
@@ -305,11 +305,11 @@ try {
   await check('settings round-trip and show up in the public config', async () => {
     const current = (await call('GET', '/api/admin/settings')).json;
     assert(current.system.region === region, current.system.region);
-    const updated = await call('PUT', '/api/admin/settings', { ...current.settings, branding: { ...current.settings.branding, appName: 'S3ndless E2E' } });
+    const updated = await call('PUT', '/api/admin/settings', { ...current.settings, branding: { ...current.settings.branding, appName: 'Sendless E2E' } });
     assert(updated.status === 200, `put ${updated.status} ${JSON.stringify(updated.json)}`);
     await sleep(11_000); // settings are cached for 10 s per Lambda container
     const config = await call('GET', '/api/public/config', undefined, { auth: false });
-    assert(config.json.branding.appName === 'S3ndless E2E', config.json.branding.appName);
+    assert(config.json.branding.appName === 'Sendless E2E', config.json.branding.appName);
     await call('PUT', '/api/admin/settings', current.settings);
   });
   await check('user directory lists Cognito users', async () => {

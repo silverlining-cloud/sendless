@@ -5,8 +5,8 @@ import {
   MIN_PASSWORD_LENGTH,
   type EffectiveLimits,
   type FileInput,
-} from '@s3ndless/shared';
-import { applyPolicyLimits } from '@s3ndless/ee/api';
+} from '@sendless/shared';
+import { applyPolicyLimits } from '@sendless/ee/api';
 import { hasFeature, type EditionState } from '../edition.js';
 import { badRequest } from '../http.js';
 import type { Env } from '../ports.js';

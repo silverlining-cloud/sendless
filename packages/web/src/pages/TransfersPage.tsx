@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import type { DownloadUrl, EventInfo, FileInfo, Page, TransferDetail, TransferSummary } from '@s3ndless/shared';
+import type { DownloadUrl, EventInfo, FileInfo, Page, TransferDetail, TransferSummary } from '@sendless/shared';
 import { api } from '../api/client.js';
 import { ArrowLeftIcon, DownloadIcon, FileIcon, InboxIcon, LockIcon, SendIcon, TrashIcon } from '../components/icons.js';
 import {

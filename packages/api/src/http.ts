@@ -1,5 +1,5 @@
 import type { ZodType } from 'zod';
-import type { ApiErrorBody } from '@s3ndless/shared';
+import type { ApiErrorBody } from '@sendless/shared';
 
 export interface HttpRequest {
   method: string;

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import type { UserInfo } from '@s3ndless/shared';
+import type { UserInfo } from '@sendless/shared';
 import { api } from '../../api/client.js';
 import { useAuth } from '../../auth/AuthProvider.js';
 import { Alert, AsyncView, Badge, Button, Card, Checkbox, ConfirmButton, Field, Input, useAsync } from '../../components/ui.js';

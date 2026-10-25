@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useParams } from 'react-router';
-import type { PublicRequest, SubmissionResult } from '@s3ndless/shared';
+import type { PublicRequest, SubmissionResult } from '@sendless/shared';
 import { publicApi } from '../api/client.js';
 import { FilePicker, validateFiles } from '../components/files.js';
 import { CheckIcon, ClockIcon, LockIcon } from '../components/icons.js';

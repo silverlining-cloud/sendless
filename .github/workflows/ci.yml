@@ -28,13 +28,13 @@ jobs:
         env:
           DYNAMODB_ENDPOINT: http://localhost:8000
       - name: Build a release (reproducible zips + template)
-        run: npm run release -- --base-url https://ci.invalid/s3ndless
+        run: npm run release -- --base-url https://ci.invalid/sendless
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Lint the CloudFormation templates
         run: |
           pip install cfn-lint
-          cfn-lint template/s3ndless.yaml dist/release/s3ndless.yaml
+          cfn-lint template/sendless.yaml dist/release/sendless.yaml
       - name: Check the inline bootstrap answers CloudFormation
         run: python3 -I scripts/check-bootstrap.py

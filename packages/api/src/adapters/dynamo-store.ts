@@ -8,7 +8,7 @@ import {
   UpdateCommand,
   type QueryCommandInput,
 } from '@aws-sdk/lib-dynamodb';
-import type { ScanStatus, TransferKind } from '@s3ndless/shared';
+import type { ScanStatus, TransferKind } from '@sendless/shared';
 import { badRequest } from '../http.js';
 import type { EventRecord, RequestRecord, SessionRecord, StoredFile, SystemConfig, TransferRecord } from '../model.js';
 import type { DueItem, LockableKind, OpenResult, Page, Store } from '../ports.js';

@@ -1,4 +1,4 @@
-import type { ScanStatus, TransferKind } from '@s3ndless/shared';
+import type { ScanStatus, TransferKind } from '@sendless/shared';
 import { badRequest } from '../http.js';
 import type { EventRecord, RequestRecord, SessionRecord, SystemConfig, TransferRecord } from '../model.js';
 import type { DueItem, LockableKind, OpenResult, Page, Store } from '../ports.js';

@@ -1,4 +1,4 @@
-import type { FileStatus, RequestStatus, ScanStatus, Submitter, TransferKind, TransferStatus } from '@s3ndless/shared';
+import type { FileStatus, RequestStatus, ScanStatus, Submitter, TransferKind, TransferStatus } from '@sendless/shared';
 
 /** All timestamps are epoch milliseconds unless the name says otherwise. */
 

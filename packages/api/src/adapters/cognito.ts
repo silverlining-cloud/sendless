@@ -12,7 +12,7 @@ import {
   UsernameExistsException,
   type UserType,
 } from '@aws-sdk/client-cognito-identity-provider';
-import type { UserInfo } from '@s3ndless/shared';
+import type { UserInfo } from '@sendless/shared';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { conflict } from '../http.js';
 import type { SystemConfig } from '../model.js';

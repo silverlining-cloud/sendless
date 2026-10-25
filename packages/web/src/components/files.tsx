@@ -1,5 +1,5 @@
 import { useRef, useState, type DragEvent } from 'react';
-import { fileExtension, type EffectiveLimits } from '@s3ndless/shared';
+import { fileExtension, type EffectiveLimits } from '@sendless/shared';
 import { bytes } from '../format.js';
 import { useI18n, type Translate } from '../i18n/index.js';
 import { FileIcon, PlusIcon, UploadIcon, XIcon } from './icons.js';

@@ -1,4 +1,4 @@
-/* S3ndless — brand colors come from the admin settings via CSS variables (see config.tsx). */
+/* Sendless — brand colors come from the admin settings via CSS variables (see config.tsx). */
 :root {
   --brand: #2f6fb5;
   --brand-hover: #285e9a;

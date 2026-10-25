@@ -7,7 +7,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { reconcileSsoProviders } from '@s3ndless/ee/api';
+import { reconcileSsoProviders } from '@sendless/ee/api';
 import { unzipSync } from 'fflate';
 import { awsDeps } from '../runtime.js';
 
@@ -42,7 +42,7 @@ interface CustomResourceEvent {
   ResourceProperties: SetupProperties & { ServiceToken: string };
 }
 
-const PHYSICAL_ID = 's3ndless-setup';
+const PHYSICAL_ID = 'sendless-setup';
 
 const CONTENT_TYPES: Record<string, string> = {
   html: 'text/html; charset=utf-8',

@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { useParams } from 'react-router';
-import type { DownloadUrl, FileInfo, PublicTransfer, UnlockResult } from '@s3ndless/shared';
+import type { DownloadUrl, FileInfo, PublicTransfer, UnlockResult } from '@sendless/shared';
 import { publicApi } from '../api/client.js';
 import { AlertIcon, ClockIcon, DownloadIcon, FileIcon, LockIcon } from '../components/icons.js';
 import { Alert, Badge, Button, Card, Field, Input, isApiError, Loading, useAsync } from '../components/ui.js';
 import { bytes, dateTime, fileCount } from '../format.js';
 import { useI18n } from '../i18n/index.js';
 
-const sessionKey = (id: string) => `s3ndless.session.${id}`;
+const sessionKey = (id: string) => `sendless.session.${id}`;
 
 /** Re-uses an unlocked session after a reload, so refreshing does not count as another open. */
 function storedSession(id: string): UnlockResult | null {

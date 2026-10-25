@@ -1,4 +1,4 @@
-import type { EventInfo } from '@s3ndless/shared';
+import type { EventInfo } from '@sendless/shared';
 import { randomId } from '../crypto.js';
 import type { HttpRequest } from '../http.js';
 import type { ActorRecord, EventRecord } from '../model.js';

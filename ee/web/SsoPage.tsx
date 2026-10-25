@@ -1,10 +1,10 @@
-// S3ndless Pro. Licensed under the S3ndless Enterprise License (see ee/LICENSE).
+// Sendless Pro. Licensed under the Sendless Enterprise License (see ee/LICENSE).
 import { useState, type FormEvent } from 'react';
-import type { SsoProviderInfo } from '@s3ndless/shared';
-import { api } from '@s3ndless/web/api';
-import { useConfig } from '@s3ndless/web/config';
-import { useI18n } from '@s3ndless/web/i18n';
-import { Alert, AsyncView, Badge, Button, Card, ConfirmButton, CopyButton, EmptyState, Field, Input, isApiError, ProGate, Select, useAsync } from '@s3ndless/web/ui';
+import type { SsoProviderInfo } from '@sendless/shared';
+import { api } from '@sendless/web/api';
+import { useConfig } from '@sendless/web/config';
+import { useI18n } from '@sendless/web/i18n';
+import { Alert, AsyncView, Badge, Button, Card, ConfirmButton, CopyButton, EmptyState, Field, Input, isApiError, ProGate, Select, useAsync } from '@sendless/web/ui';
 
 const SAML_EMAIL = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress';
 const domainList = (value: string) => value.split(/[\s,;]+/).map((d) => d.trim().toLowerCase()).filter(Boolean);

@@ -17,7 +17,7 @@ export interface AuthConfig {
   region: string;
   userPoolId: string;
   clientId: string;
-  /** Cognito managed login domain, e.g. `s3ndless-…auth.eu-central-1.amazoncognito.com`. */
+  /** Cognito managed login domain, e.g. `sendless-…auth.eu-central-1.amazoncognito.com`. */
   domain: string;
   selfSignUp: boolean;
 }

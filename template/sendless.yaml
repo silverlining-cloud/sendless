@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >-
-  S3ndless - serverless file transfer in your own AWS account. Expiring links, password protection,
+  Sendless - serverless file transfer in your own AWS account. Expiring links, password protection,
   file requests. CloudFront + Lambda + S3 + DynamoDB + Cognito. Version __VERSION__.
 
 Metadata:
@@ -161,7 +161,7 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/bootstrap'
+      LogGroupName: !Sub '/sendless/${AWS::StackName}/bootstrap'
       RetentionInDays: !Ref LogRetentionDays
 
   BootstrapRole:
@@ -191,7 +191,7 @@ Resources:
   BootstrapFunction:
     Type: AWS::Lambda::Function
     Properties:
-      Description: S3ndless - copies the pinned release artifacts into the stack's artifact bucket
+      Description: Sendless - copies the pinned release artifacts into the stack's artifact bucket
       Runtime: python3.13
       Architectures: [arm64]
       Handler: index.handler
@@ -240,7 +240,7 @@ Resources:
                   respond(event, event['RequestType'] == 'Delete', physical, str(e)[:400])
 
   Bootstrap:
-    Type: Custom::S3ndlessArtifacts
+    Type: Custom::SendlessArtifacts
     DependsOn: [ArtifactsBucketPolicy]
     Properties:
       ServiceToken: !GetAtt BootstrapFunction.Arn
@@ -303,7 +303,7 @@ Resources:
     UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub
-        - 's3ndless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}'
+        - 'sendless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}'
         - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -399,7 +399,7 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/api'
+      LogGroupName: !Sub '/sendless/${AWS::StackName}/api'
       RetentionInDays: !Ref LogRetentionDays
 
   ApiRole:
@@ -425,7 +425,7 @@ Resources:
               - Effect: Allow
                 Action: [s3:PutObject, s3:GetObject, s3:DeleteObject, s3:AbortMultipartUpload, s3:ListMultipartUploadParts]
                 Resource: !Sub
-                  - 'arn:${AWS::Partition}:s3:::s3ndless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}/files/*'
+                  - 'arn:${AWS::Partition}:s3:::sendless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}/files/*'
                   - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
               - !If
                 - HasSenderEmail
@@ -468,7 +468,7 @@ Resources:
     Type: AWS::Lambda::Function
     DependsOn: [Bootstrap]
     Properties:
-      Description: S3ndless - HTTP API
+      Description: Sendless - HTTP API
       Runtime: nodejs22.x
       Architectures: [arm64]
       Handler: api.handler
@@ -484,7 +484,7 @@ Resources:
           APP_VERSION: !FindInMap [Release, Current, Version]
           TABLE_NAME: !Ref Table
           FILES_BUCKET: !Sub
-            - 's3ndless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}'
+            - 'sendless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}'
             - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
           MAX_RETENTION_DAYS: !Ref MaxRetentionDays
           MALWARE_SCANNING: !Ref EnableMalwareScanning
@@ -523,9 +523,9 @@ Resources:
     Properties:
       OriginAccessControlConfig:
         Name: !Sub
-          - 's3ndless-${Suffix}-web'
+          - 'sendless-${Suffix}-web'
           - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
-        Description: S3ndless web bucket
+        Description: Sendless web bucket
         OriginAccessControlOriginType: s3
         SigningBehavior: always
         SigningProtocol: sigv4
@@ -535,9 +535,9 @@ Resources:
     Properties:
       OriginAccessControlConfig:
         Name: !Sub
-          - 's3ndless-${Suffix}-api'
+          - 'sendless-${Suffix}-api'
           - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
-        Description: S3ndless API function URL
+        Description: Sendless API function URL
         OriginAccessControlOriginType: lambda
         SigningBehavior: always
         SigningProtocol: sigv4
@@ -546,7 +546,7 @@ Resources:
     Type: AWS::CloudFront::Function
     Properties:
       Name: !Sub
-        - 's3ndless-${Suffix}-spa'
+        - 'sendless-${Suffix}-spa'
         - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
       AutoPublish: true
       FunctionConfig:
@@ -567,16 +567,16 @@ Resources:
     Properties:
       OriginRequestPolicyConfig:
         Name: !Sub
-          - 's3ndless-${Suffix}-api'
+          - 'sendless-${Suffix}-api'
           - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
         # Never Host (must stay the function URL's). x-amz-content-sha256 is not listed: CloudFront
         # rejects it here and uses it for the OAC signature on its own.
-        Comment: Headers the S3ndless API needs
+        Comment: Headers the Sendless API needs
         HeadersConfig:
           HeaderBehavior: whitelist
           Headers:
             - content-type
-            - x-s3ndless-token
+            - x-sendless-token
             - user-agent
             - accept-language
             - CloudFront-Viewer-Address
@@ -589,9 +589,9 @@ Resources:
     Properties:
       ResponseHeadersPolicyConfig:
         Name: !Sub
-          - 's3ndless-${Suffix}-security'
+          - 'sendless-${Suffix}-security'
           - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
-        Comment: S3ndless security headers
+        Comment: Sendless security headers
         SecurityHeadersConfig:
           StrictTransportSecurity: { AccessControlMaxAgeSec: 31536000, Override: true }
           ContentTypeOptions: { Override: true }
@@ -604,11 +604,11 @@ Resources:
                 default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;
                 font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';
                 connect-src 'self' https://${Bucket}.s3.${AWS::Region}.${AWS::URLSuffix} https://${Bucket}.s3.${AWS::URLSuffix}
-                https://s3ndless-${AWS::AccountId}-${Suffix}.auth.${AWS::Region}.amazoncognito.com
+                https://sendless-${AWS::AccountId}-${Suffix}.auth.${AWS::Region}.amazoncognito.com
                 https://cognito-idp.${AWS::Region}.${AWS::URLSuffix}
               - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
                 Bucket: !Sub
-                  - 's3ndless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}'
+                  - 'sendless-files-${AWS::AccountId}-${AWS::Region}-${Suffix}'
                   - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
         CustomHeadersConfig:
           Items:
@@ -626,7 +626,7 @@ Resources:
     Properties:
       DistributionConfig:
         Enabled: true
-        Comment: !Sub 'S3ndless (${AWS::StackName})'
+        Comment: !Sub 'Sendless (${AWS::StackName})'
         HttpVersion: http2and3
         IPV6Enabled: true
         PriceClass: !Ref CloudFrontPriceClass
@@ -680,7 +680,7 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/pre-signup'
+      LogGroupName: !Sub '/sendless/${AWS::StackName}/pre-signup'
       RetentionInDays: !Ref LogRetentionDays
 
   PreSignUpRole:
@@ -707,7 +707,7 @@ Resources:
     Condition: HasSelfSignUp
     DependsOn: [Bootstrap]
     Properties:
-      Description: S3ndless - restricts self sign-up to approved email domains
+      Description: Sendless - restricts self sign-up to approved email domains
       Runtime: nodejs22.x
       Architectures: [arm64]
       Handler: pre-signup.handler
@@ -734,7 +734,7 @@ Resources:
   UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
-      UserPoolName: !Sub 's3ndless-${AWS::StackName}'
+      UserPoolName: !Sub 'sendless-${AWS::StackName}'
       UserPoolTier: ESSENTIALS
       DeletionProtection: INACTIVE
       UsernameAttributes: [email]
@@ -757,10 +757,10 @@ Resources:
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: !If [HasSelfSignUp, false, true]
         InviteMessageTemplate:
-          EmailSubject: Your S3ndless account
+          EmailSubject: Your Sendless account
           EmailMessage: !Sub
             - >-
-              You have been invited to S3ndless at ${AppUrl}<br><br>Username: {username}<br>Temporary password: {####}<br><br>You
+              You have been invited to Sendless at ${AppUrl}<br><br>Username: {username}<br>Temporary password: {####}<br><br>You
               will be asked to choose a new password when you sign in for the first time.
             - AppUrl: !If [HasCustomDomain, !Sub 'https://${CustomDomainName}', !Sub 'https://${Distribution.DomainName}']
       LambdaConfig: !If
@@ -799,7 +799,7 @@ Resources:
     Properties:
       UserPoolId: !Ref UserPool
       Domain: !Sub
-        - 's3ndless-${AWS::AccountId}-${Suffix}'
+        - 'sendless-${AWS::AccountId}-${Suffix}'
         - Suffix: !Select [0, !Split ['-', !Select [2, !Split ['/', !Ref AWS::StackId]]]]
       ManagedLoginVersion: 2
 
@@ -816,7 +816,7 @@ Resources:
     Properties:
       UserPoolId: !Ref UserPool
       GroupName: admins
-      Description: S3ndless administrators
+      Description: Sendless administrators
 
   AdminUser:
     Type: AWS::Cognito::UserPoolUser
@@ -844,7 +844,7 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/setup'
+      LogGroupName: !Sub '/sendless/${AWS::StackName}/setup'
       RetentionInDays: !Ref LogRetentionDays
 
   SetupRole:
@@ -891,7 +891,7 @@ Resources:
     Type: AWS::Lambda::Function
     DependsOn: [Bootstrap]
     Properties:
-      Description: S3ndless - deploy-time setup (custom resource)
+      Description: Sendless - deploy-time setup (custom resource)
       Runtime: nodejs22.x
       Architectures: [arm64]
       Handler: setup.handler
@@ -910,7 +910,7 @@ Resources:
           MAX_RETENTION_DAYS: !Ref MaxRetentionDays
 
   Setup:
-    Type: Custom::S3ndlessSetup
+    Type: Custom::SendlessSetup
     DependsOn: [ManagedLoginBranding, AdminMembership, FilesBucketPolicy, WebBucketPolicy]
     Properties:
       ServiceToken: !GetAtt SetupFunction.Arn
@@ -934,7 +934,7 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/sweeper'
+      LogGroupName: !Sub '/sendless/${AWS::StackName}/sweeper'
       RetentionInDays: !Ref LogRetentionDays
 
   SweeperRole:
@@ -965,7 +965,7 @@ Resources:
     Type: AWS::Lambda::Function
     DependsOn: [Bootstrap]
     Properties:
-      Description: S3ndless - deletes expired transfers
+      Description: Sendless - deletes expired transfers
       Runtime: nodejs22.x
       Architectures: [arm64]
       Handler: sweeper.handler
@@ -987,7 +987,7 @@ Resources:
   SweeperSchedule:
     Type: AWS::Events::Rule
     Properties:
-      Description: S3ndless - run the sweeper
+      Description: Sendless - run the sweeper
       ScheduleExpression: rate(15 minutes)
       State: ENABLED
       Targets:
@@ -1069,7 +1069,7 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub '/s3ndless/${AWS::StackName}/scan-result'
+      LogGroupName: !Sub '/sendless/${AWS::StackName}/scan-result'
       RetentionInDays: !Ref LogRetentionDays
 
   ScanResultRole:
@@ -1102,7 +1102,7 @@ Resources:
     Condition: MalwareScanning
     DependsOn: [Bootstrap]
     Properties:
-      Description: S3ndless Pro - records GuardDuty scan results
+      Description: Sendless Pro - records GuardDuty scan results
       Runtime: nodejs22.x
       Architectures: [arm64]
       Handler: scan-result.handler
@@ -1125,7 +1125,7 @@ Resources:
     Type: AWS::Events::Rule
     Condition: MalwareScanning
     Properties:
-      Description: S3ndless Pro - GuardDuty scan results for the files bucket
+      Description: Sendless Pro - GuardDuty scan results for the files bucket
       EventPattern:
         source: [aws.guardduty]
         detail-type: [GuardDuty Malware Protection Object Scan Result]

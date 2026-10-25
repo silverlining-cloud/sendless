@@ -1,6 +1,6 @@
-// Builds a release: dist/release/{backend.zip, web.zip, s3ndless.yaml, SHA256SUMS}.
+// Builds a release: dist/release/{backend.zip, web.zip, sendless.yaml, SHA256SUMS}.
 //
-//   npm run release -- --base-url https://my-bucket.s3.amazonaws.com/s3ndless/v1.0.0
+//   npm run release -- --base-url https://my-bucket.s3.amazonaws.com/sendless/v1.0.0
 //
 // The template pins the version and the SHA-256 of both zips; the zips are byte-for-byte
 // reproducible, so anyone can rebuild a release and compare the checksums.
@@ -18,7 +18,7 @@ const { values } = parseArgs({
   },
 });
 const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
-const baseUrl = (values['base-url'] ?? `https://REPLACE-WITH-YOUR-BUCKET.s3.amazonaws.com/s3ndless/v${version}`).replace(/\/$/, '');
+const baseUrl = (values['base-url'] ?? `https://REPLACE-WITH-YOUR-BUCKET.s3.amazonaws.com/sendless/v${version}`).replace(/\/$/, '');
 if (!baseUrl.startsWith('https://')) throw new Error('--base-url must start with https://');
 
 if (!values['skip-build']) execSync('npm run build', { stdio: 'inherit' });
@@ -50,19 +50,19 @@ writeFileSync('dist/release/backend.zip', backend);
 writeFileSync('dist/release/web.zip', web);
 
 const checksums = { backend: sha256(backend), web: sha256(web) };
-const template = readFileSync('template/s3ndless.yaml', 'utf8')
+const template = readFileSync('template/sendless.yaml', 'utf8')
   .replaceAll('__VERSION__', version)
   .replaceAll('__BACKEND_SHA256__', checksums.backend)
   .replaceAll('__WEB_SHA256__', checksums.web)
   .replaceAll('https://__ARTIFACT_BASE_URL__', baseUrl);
 if (/__[A-Z_]+__/.test(template)) throw new Error('Unreplaced placeholder in template');
-writeFileSync('dist/release/s3ndless.yaml', template);
+writeFileSync('dist/release/sendless.yaml', template);
 writeFileSync(
   'dist/release/SHA256SUMS',
-  `${checksums.backend}  backend.zip\n${checksums.web}  web.zip\n${sha256(template)}  s3ndless.yaml\n`,
+  `${checksums.backend}  backend.zip\n${checksums.web}  web.zip\n${sha256(template)}  sendless.yaml\n`,
 );
 
-console.log(`\nS3ndless ${version}`);
+console.log(`\nSendless ${version}`);
 console.log(`  backend.zip  ${(backend.length / 1024).toFixed(0)} KiB  ${checksums.backend}`);
 console.log(`  web.zip      ${(web.length / 1024).toFixed(0)} KiB  ${checksums.web}`);
 console.log(`  artifacts expected at ${baseUrl}/`);

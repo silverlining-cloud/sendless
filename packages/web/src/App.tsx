@@ -16,9 +16,9 @@ const AdminLayout = lazy(() => import('./pages/admin/AdminLayout.js').then((m) =
 const SettingsPage = lazy(() => import('./pages/admin/SettingsPage.js').then((m) => ({ default: m.SettingsPage })));
 const UsersPage = lazy(() => import('./pages/admin/UsersPage.js').then((m) => ({ default: m.UsersPage })));
 const LicensePage = lazy(() => import('./pages/admin/LicensePage.js').then((m) => ({ default: m.LicensePage })));
-const AuditPage = lazy(() => import('@s3ndless/ee/web').then((m) => ({ default: m.AuditPage })));
-const PoliciesPage = lazy(() => import('@s3ndless/ee/web').then((m) => ({ default: m.PoliciesPage })));
-const SsoPage = lazy(() => import('@s3ndless/ee/web').then((m) => ({ default: m.SsoPage })));
+const AuditPage = lazy(() => import('@sendless/ee/web').then((m) => ({ default: m.AuditPage })));
+const PoliciesPage = lazy(() => import('@sendless/ee/web').then((m) => ({ default: m.PoliciesPage })));
+const SsoPage = lazy(() => import('@sendless/ee/web').then((m) => ({ default: m.SsoPage })));
 
 const page = (element: ReactNode) => <Suspense fallback={<Loading />}>{element}</Suspense>;
 

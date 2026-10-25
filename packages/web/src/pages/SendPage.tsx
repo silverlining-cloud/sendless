@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
-import type { CreateTransferResult } from '@s3ndless/shared';
+import type { CreateTransferResult } from '@sendless/shared';
 import { api } from '../api/client.js';
 import { FilePicker, validateFiles } from '../components/files.js';
 import { CheckIcon } from '../components/icons.js';

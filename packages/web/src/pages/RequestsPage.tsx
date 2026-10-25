@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { GiB, type Page, type RequestDetail, type RequestSummary } from '@s3ndless/shared';
+import { GiB, type Page, type RequestDetail, type RequestSummary } from '@sendless/shared';
 import { api } from '../api/client.js';
 import { ArrowLeftIcon, InboxIcon, LockIcon, PlusIcon } from '../components/icons.js';
 import {

@@ -35,7 +35,7 @@ pip install cfn-lint && npm run lint:template
 ### End-to-end against a deployed stack
 
 ```bash
-npm run e2e -- --stack s3ndless-test --region eu-central-1 [--keep]
+npm run e2e -- --stack sendless-test --region eu-central-1 [--keep]
 ```
 
 `scripts/e2e.mjs` uses your AWS credentials to:
@@ -65,23 +65,23 @@ packages/web/src
   pages/                send, transfers, requests, public download/upload, admin
 ee/api                  license, policies, malware, SSO, Pro routes
 ee/web                  audit, policies and SSO admin screens
-template/s3ndless.yaml  CloudFormation
+template/sendless.yaml  CloudFormation
 ```
 
 ## Conventions
 
-- Validate every request body with the zod schema from `@s3ndless/shared`, and keep limits in one place (`services/limits.ts`).
+- Validate every request body with the zod schema from `@sendless/shared`, and keep limits in one place (`services/limits.ts`).
 - Never log request bodies, passwords, tokens or upload tokens. The logger redacts sensitive-looking keys as a safety net.
 - Errors that reach users are `HttpError`s with a stable `code` the web app can react to.
 - New UI strings go into `i18n/en.ts` **and** `i18n/de.ts`; the type checker enforces that German has every key.
-- Code under `ee/` is Pro and under the Enterprise License. Core code may call into it, but `ee/` must only import leaf modules of the core (`@s3ndless/api/http`, `/ports`, `/model`, `/settings`, `/audit`, `@s3ndless/web/*`).
+- Code under `ee/` is Pro and under the Enterprise License. Core code may call into it, but `ee/` must only import leaf modules of the core (`@sendless/api/http`, `/ports`, `/model`, `/settings`, `/audit`, `@sendless/web/*`).
 
 ## License keys (vendor)
 
 ```bash
-npm run license:keygen                      # once: writes ~/.s3ndless/<kid>.private.pem, prints the public key
+npm run license:keygen                      # once: writes ~/.sendless/<kid>.private.pem, prints the public key
 #   → add the printed entry to ee/api/keys.ts and release
-npm run license:issue -- --kid s3ndless-2026-1 --licensee "Acme GmbH" --days 365
+npm run license:issue -- --kid sendless-2026-1 --licensee "Acme GmbH" --days 365
 ```
 
 Keep the private key out of the repository (it is git-ignored) and back it up.

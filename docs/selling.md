@@ -1,4 +1,4 @@
-# Selling S3ndless Pro
+# Selling Sendless Pro
 
 How the open core, the license key and AWS Marketplace fit together.
 
@@ -13,8 +13,8 @@ How the open core, the license key and AWS Marketplace fit together.
 A license key is a compact JWS signed with Ed25519:
 
 ```
-base64url({"alg":"EdDSA","typ":"S3NDLESS-LICENSE","kid":"s3ndless-2026-1"})
-. base64url({"iss":"s3ndless","lid":"…","licensee":"Acme GmbH","edition":"pro","features":["sso",…],"iat":…,"exp":…})
+base64url({"alg":"EdDSA","typ":"SENDLESS-LICENSE","kid":"sendless-2026-1"})
+. base64url({"iss":"sendless","lid":"…","licensee":"Acme GmbH","edition":"pro","features":["sso",…],"iat":…,"exp":…})
 . base64url(signature)
 ```
 

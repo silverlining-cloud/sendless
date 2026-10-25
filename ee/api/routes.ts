@@ -1,8 +1,8 @@
-import { policiesSchema, ssoProviderInput, type EventInfo } from '@s3ndless/shared';
-import { ADMIN_SUBJECT, recordEvent, toEventInfo, userActor } from '@s3ndless/api/audit';
-import { badRequest, json, noContent, parseBody, type HttpResponse } from '@s3ndless/api/http';
-import type { ProRouteContext } from '@s3ndless/api/ports';
-import type { Router } from '@s3ndless/api/router';
+import { policiesSchema, ssoProviderInput, type EventInfo } from '@sendless/shared';
+import { ADMIN_SUBJECT, recordEvent, toEventInfo, userActor } from '@sendless/api/audit';
+import { badRequest, json, noContent, parseBody, type HttpResponse } from '@sendless/api/http';
+import type { ProRouteContext } from '@sendless/api/ports';
+import type { Router } from '@sendless/api/router';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_EXPORT_DAYS = 31;
@@ -82,10 +82,10 @@ export function registerProRoutes(r: Router, ctx: ProRouteContext): void {
       statusCode: 200,
       headers: {
         'content-type': 'text/csv; charset=utf-8',
-        'content-disposition': `attachment; filename="s3ndless-audit-${from}_${to}.csv"`,
+        'content-disposition': `attachment; filename="sendless-audit-${from}_${to}.csv"`,
         'cache-control': 'no-store',
-        'x-s3ndless-truncated': String(truncated),
-        'access-control-expose-headers': 'x-s3ndless-truncated',
+        'x-sendless-truncated': String(truncated),
+        'access-control-expose-headers': 'x-sendless-truncated',
       },
       body: `${lines.join('\n')}\n`,
     };

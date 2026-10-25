@@ -6,7 +6,7 @@ export type Locale = 'en' | 'de';
 export type { MessageKey };
 
 const DICTIONARIES: Record<Locale, Record<MessageKey, string>> = { en, de };
-const STORAGE_KEY = 's3ndless.locale';
+const STORAGE_KEY = 'sendless.locale';
 
 export type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string;
 

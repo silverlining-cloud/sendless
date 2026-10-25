@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RequestSummary, SubmissionResult } from '@s3ndless/shared';
+import type { RequestSummary, SubmissionResult } from '@sendless/shared';
 import { createHarness, type Harness } from '../test-utils.js';
 
 async function createRequest(h: Harness, overrides: Record<string, unknown> = {}) {

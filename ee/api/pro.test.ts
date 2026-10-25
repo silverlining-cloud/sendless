@@ -15,7 +15,7 @@ async function licensed(features = ['sso', 'malware-scanning', 'audit', 'policie
   const enc = (v: unknown) => Buffer.from(JSON.stringify(v)).toString('base64url');
   const now = Math.floor(h.clock.now / 1000);
   const input = `${enc({ alg: 'EdDSA', typ: LICENSE_TYPE, kid: 'test' })}.${enc({
-    iss: 's3ndless',
+    iss: 'sendless',
     lid: 'lic',
     licensee: 'Acme',
     edition: 'pro',

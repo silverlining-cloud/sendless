@@ -1,4 +1,4 @@
-import { CONTENT_SHA256_HEADER, TOKEN_HEADER, type ApiErrorBody } from '@s3ndless/shared';
+import { CONTENT_SHA256_HEADER, TOKEN_HEADER, type ApiErrorBody } from '@sendless/shared';
 
 export class ApiError extends Error {
   constructor(
@@ -32,7 +32,7 @@ export interface RequestOptions {
 }
 
 /**
- * Calls the S3ndless API. Writes carry `x-amz-content-sha256`, which CloudFront's origin
+ * Calls the Sendless API. Writes carry `x-amz-content-sha256`, which CloudFront's origin
  * access control requires for Lambda function URLs; the user token goes in its own header
  * because CloudFront replaces `Authorization` with its SigV4 signature.
  */

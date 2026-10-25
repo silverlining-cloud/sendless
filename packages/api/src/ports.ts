@@ -1,4 +1,4 @@
-import type { ProFeature, ScanStatus, SsoProviderInfo, SsoProviderInput, TransferKind, UserInfo } from '@s3ndless/shared';
+import type { ProFeature, ScanStatus, SsoProviderInfo, SsoProviderInput, TransferKind, UserInfo } from '@sendless/shared';
 import type { HttpRequest } from './http.js';
 import type { Logger } from './log.js';
 import type { EventRecord, RequestRecord, SessionRecord, SystemConfig, TransferRecord } from './model.js';

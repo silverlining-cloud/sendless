@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CreateTransferResult, UnlockResult, UploadPlan } from '@s3ndless/shared';
+import type { CreateTransferResult, UnlockResult, UploadPlan } from '@sendless/shared';
 import { createHarness, type Harness } from '../test-utils.js';
 import { sweep } from './sweeper.js';
 

@@ -13,8 +13,8 @@ import {
   updateUserInput,
   uploadTokenInput,
   type ProFeature,
-} from '@s3ndless/shared';
-import { registerProRoutes } from '@s3ndless/ee/api';
+} from '@sendless/shared';
+import { registerProRoutes } from '@sendless/ee/api';
 import { editionFor, hasFeature } from './edition.js';
 import {
   badRequest,
@@ -53,7 +53,7 @@ export function createApp(deps: Deps): App {
   const requireFeature = async (feature: ProFeature): Promise<void> => {
     const edition = editionFor(await deps.settings(), deps.now());
     if (!hasFeature(edition, feature)) {
-      throw forbidden('This feature requires an S3ndless Pro license', 'pro_required');
+      throw forbidden('This feature requires a Sendless Pro license', 'pro_required');
     }
   };
   const kindParam = (value: string | undefined) => {

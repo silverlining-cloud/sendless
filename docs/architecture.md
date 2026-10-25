@@ -1,4 +1,4 @@
-# S3ndless architecture
+# Sendless architecture
 
 Status: **accepted** (2026-10-24). Changes are recorded in the decision log at the end.
 
@@ -58,8 +58,8 @@ flowchart LR
 ## Repository layout
 
 ```
-s3ndless/
-├─ template/s3ndless.yaml     CloudFormation template (one-click)
+sendless/
+├─ template/sendless.yaml     CloudFormation template (one-click)
 ├─ packages/
 │  ├─ shared/                 API types and zod schemas (used by api and web)
 │  ├─ api/                    Lambda handlers: api, sweeper, setup, pre-sign-up; dev server
@@ -73,7 +73,7 @@ s3ndless/
 
 ## API
 
-The API is served from the same origin under `/api`. Authenticated calls send the Cognito access token in `X-S3ndless-Token`, because CloudFront's OAC replaces `Authorization`. POST, PUT, PATCH and DELETE requests send `x-amz-content-sha256`, which the SPA's API client adds automatically.
+The API is served from the same origin under `/api`. Authenticated calls send the Cognito access token in `X-Sendless-Token`, because CloudFront's OAC replaces `Authorization`. POST, PUT, PATCH and DELETE requests send `x-amz-content-sha256`, which the SPA's API client adds automatically.
 
 **Public (no login):**
 - `GET  /api/public/config`: branding, enabled features, limits
@@ -142,9 +142,9 @@ The API is served from the same origin under `/api`. Authenticated calls send th
 
 | Topic | Decision | Reason |
 |-------|----------|--------|
-| API token | The SPA sends the Cognito **ID token** in `X-S3ndless-Token`. | Access tokens carry no email address, and CloudFront OAC replaces `Authorization`. |
+| API token | The SPA sends the Cognito **ID token** in `X-Sendless-Token`. | Access tokens carry no email address, and CloudFront OAC replaces `Authorization`. |
 | Deploy-time config | User pool, client ID and app URL are written to a `SYSTEM` item in DynamoDB by the setup custom resource, not to Lambda environment variables. | Breaks the CloudFormation cycle CloudFront → function URL → function → user pool → CloudFront. |
-| Files bucket name | Derived from account, Region and stack ID (`s3ndless-files-…`). | Lets the CSP and IAM policies reference the bucket without creating a dependency cycle through CloudFront. |
+| Files bucket name | Derived from account, Region and stack ID (`sendless-files-…`). | Lets the CSP and IAM policies reference the bucket without creating a dependency cycle through CloudFront. |
 | Transfer lifetime | Counted from upload **completion**. Uploads must finish within 24 h. | A 2-hour link should not expire while a large upload is still running. |
 | Recipient session | A random session ID stored in DynamoDB with TTL, not a signed token. | No secrets to generate, store or rotate. |
 | File names | Path separators are replaced with `_` instead of being stripped. | Found in browser testing: `notes <b>bold</b>.txt` lost its prefix. Storage keys never use names. |

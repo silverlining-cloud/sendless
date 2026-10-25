@@ -1,5 +1,5 @@
 {
-  "name": "@s3ndless/web",
+  "name": "@sendless/web",
   "version": "1.0.0",
   "private": true,
   "license": "Apache-2.0",
@@ -18,8 +18,8 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@s3ndless/ee": "1.0.0",
-    "@s3ndless/shared": "1.0.0",
+    "@sendless/ee": "1.0.0",
+    "@sendless/shared": "1.0.0",
     "oidc-client-ts": "^3.5.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

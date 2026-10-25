@@ -8,8 +8,8 @@ import { createHash, generateKeyPairSync, sign } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { CONTENT_SHA256_HEADER, PRO_FEATURES } from '@s3ndless/shared';
-import { LICENSE_TYPE, MemoryIdentityProviders, trustDevelopmentKey } from '@s3ndless/ee/api';
+import { CONTENT_SHA256_HEADER, PRO_FEATURES } from '@sendless/shared';
+import { LICENSE_TYPE, MemoryIdentityProviders, trustDevelopmentKey } from '@sendless/ee/api';
 import { DevAuthenticator, MemoryDirectory } from '../adapters/dev.js';
 import { LocalBlobStore } from '../adapters/local-blobs.js';
 import { ConsoleMailer } from '../adapters/mailers.js';
@@ -21,7 +21,7 @@ import { createLogger } from '../log.js';
 import { sweep } from '../services/sweeper.js';
 
 // Not PORT: tools often set that for the web dev server, which the Vite proxy forwards to us.
-const PORT = Number(process.env.S3NDLESS_API_PORT ?? 8787);
+const PORT = Number(process.env.SENDLESS_API_PORT ?? 8787);
 const APP_URL = process.env.APP_URL ?? 'http://localhost:5173';
 const DATA_DIR = path.resolve(import.meta.dirname, '../../../../.dev-data');
 const EMPTY_SHA256 = createHash('sha256').update('').digest('hex');
@@ -68,14 +68,14 @@ const deps = createDeps({
 });
 const app = createApp(deps);
 
-// S3NDLESS_DEV_PRO=1: install a Pro license signed by a throwaway key that only this process trusts.
-if (process.env.S3NDLESS_DEV_PRO === '1') {
+// SENDLESS_DEV_PRO=1: install a Pro license signed by a throwaway key that only this process trusts.
+if (process.env.SENDLESS_DEV_PRO === '1') {
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
   trustDevelopmentKey('local', String(publicKey.export({ type: 'spki', format: 'pem' })));
   const now = Math.floor(Date.now() / 1000);
   const enc = (v: unknown) => Buffer.from(JSON.stringify(v)).toString('base64url');
   const input = `${enc({ alg: 'EdDSA', typ: LICENSE_TYPE, kid: 'dev:local' })}.${enc({
-    iss: 's3ndless',
+    iss: 'sendless',
     lid: 'development',
     licensee: 'Local development',
     edition: 'pro',

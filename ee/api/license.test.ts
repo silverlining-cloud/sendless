@@ -9,7 +9,7 @@ const NOW = Date.parse('2026-06-01T00:00:00Z');
 function issue(payload: Record<string, unknown>, header: Record<string, unknown> = {}) {
   const enc = (v: unknown) => Buffer.from(JSON.stringify(v)).toString('base64url');
   const input = `${enc({ alg: 'EdDSA', typ: LICENSE_TYPE, kid: 'test', ...header })}.${enc({
-    iss: 's3ndless',
+    iss: 'sendless',
     lid: 'lic-1',
     licensee: 'Acme GmbH',
     edition: 'pro',
@@ -29,7 +29,7 @@ describe('verifyLicense', () => {
 
   it('rejects tampered payloads', () => {
     const [h, , s] = issue({}).split('.');
-    const forged = Buffer.from(JSON.stringify({ iss: 's3ndless', lid: 'x', licensee: 'Evil', edition: 'pro', features: ['sso'], iat: 0, exp: 9e9 })).toString('base64url');
+    const forged = Buffer.from(JSON.stringify({ iss: 'sendless', lid: 'x', licensee: 'Evil', edition: 'pro', features: ['sso'], iat: 0, exp: 9e9 })).toString('base64url');
     expect(verifyLicense(`${h}.${forged}.${s}`, NOW, keys)).toMatchObject({ ok: false, error: expect.stringContaining('signature') });
   });
 

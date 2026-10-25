@@ -1,4 +1,4 @@
-import type { EffectiveLimits, Policies } from '@s3ndless/shared';
+import type { EffectiveLimits, Policies } from '@sendless/shared';
 
 /** Tightens the core limits with the admin's policies. Policies can only restrict, never relax. */
 export function applyPolicyLimits(base: EffectiveLimits, policies: Policies): EffectiveLimits {

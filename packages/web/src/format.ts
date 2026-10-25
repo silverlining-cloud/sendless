@@ -1,4 +1,4 @@
-import { formatBytes } from '@s3ndless/shared';
+import { formatBytes } from '@sendless/shared';
 import type { Translate } from './i18n/index.js';
 
 export const bytes = (value: number, locale: string) => formatBytes(value, locale);

@@ -3,8 +3,8 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-// --pro: enable S3ndless Pro features with a throwaway development license.
-const env = { ...process.env, ...(process.argv.includes('--pro') ? { S3NDLESS_DEV_PRO: '1' } : {}) };
+// --pro: enable Sendless Pro features with a throwaway development license.
+const env = { ...process.env, ...(process.argv.includes('--pro') ? { SENDLESS_DEV_PRO: '1' } : {}) };
 const children = [
   spawn('npx', ['tsx', 'watch', 'packages/api/src/dev/server.ts'], { cwd: root, stdio: 'inherit', env }),
   spawn('npx', ['vite'], { cwd: `${root}packages/web`, stdio: 'inherit' }),

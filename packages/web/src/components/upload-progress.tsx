@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { FinalizeResult, UploadPlan } from '@s3ndless/shared';
+import type { FinalizeResult, UploadPlan } from '@sendless/shared';
 import { bytes, seconds } from '../format.js';
 import { useI18n } from '../i18n/index.js';
 import { abortUpload, runUpload, UploadCancelled, type UploadProgress } from '../upload/engine.js';

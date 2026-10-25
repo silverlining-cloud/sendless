@@ -1,4 +1,4 @@
-import { formatBytes } from '@s3ndless/shared';
+import { formatBytes } from '@sendless/shared';
 import type { Deps, MailMessage } from '../ports.js';
 
 export function escapeHtml(value: string): string {

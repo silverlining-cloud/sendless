@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { GiB, type AdminSettings, type SettingsInput } from '@s3ndless/shared';
+import { GiB, type AdminSettings, type SettingsInput } from '@sendless/shared';
 import { api } from '../../api/client.js';
 import { Alert, AsyncView, Button, Card, Checkbox, Field, Input, Select, TextArea, useAsync } from '../../components/ui.js';
 import { applyTheme, useReloadConfig } from '../../config.js';

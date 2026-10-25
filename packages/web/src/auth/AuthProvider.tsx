@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { UserManager, WebStorageStateStore } from 'oidc-client-ts';
-import type { AuthConfig, Me } from '@s3ndless/shared';
+import type { AuthConfig, Me } from '@sendless/shared';
 import { api, configureAuth } from '../api/client.js';
 import { useConfig } from '../config.js';
 
@@ -16,7 +16,7 @@ interface AuthState {
 }
 
 const AuthContext = createContext<AuthState | null>(null);
-const DEV_TOKEN = 's3ndless.devToken';
+const DEV_TOKEN = 'sendless.devToken';
 
 function createUserManager(auth: AuthConfig): UserManager {
   return new UserManager({

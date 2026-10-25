@@ -1,4 +1,4 @@
-import { emailDomain } from '@s3ndless/shared';
+import { emailDomain } from '@sendless/shared';
 
 interface PreSignUpEvent {
   triggerSource: string;

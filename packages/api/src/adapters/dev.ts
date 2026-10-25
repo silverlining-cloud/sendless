@@ -1,4 +1,4 @@
-import type { UserInfo } from '@s3ndless/shared';
+import type { UserInfo } from '@sendless/shared';
 import { conflict, notFound } from '../http.js';
 import type { Authenticator, Directory, Principal } from '../ports.js';
 

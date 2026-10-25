@@ -1,6 +1,6 @@
-# Deploying S3ndless
+# Deploying Sendless
 
-S3ndless is one CloudFormation template. It creates everything it needs and removes everything when you delete the stack.
+Sendless is one CloudFormation template. It creates everything it needs and removes everything when you delete the stack.
 
 ## Requirements
 
@@ -50,14 +50,14 @@ Delete the stack. The setup function empties the web and files buckets and the b
 
 ```bash
 npm ci
-npm run release -- --base-url https://<bucket>.s3.amazonaws.com/s3ndless/v1.0.0
-scripts/publish.sh <bucket> s3ndless/v1.0.0     # requires AWS credentials
+npm run release -- --base-url https://<bucket>.s3.amazonaws.com/sendless/v1.0.0
+scripts/publish.sh <bucket> sendless/v1.0.0     # requires AWS credentials
 ```
 
 The bucket must allow anonymous `s3:GetObject` on that prefix: CloudFormation reads the template from it, and the bootstrap function downloads the zips from it. `publish.sh` prints the quick-create link:
 
 ```
-https://console.aws.amazon.com/cloudformation/home#/stacks/quickcreate?templateURL=<url-encoded template URL>&stackName=s3ndless
+https://console.aws.amazon.com/cloudformation/home#/stacks/quickcreate?templateURL=<url-encoded template URL>&stackName=sendless
 ```
 
 The artifacts can also live elsewhere, e.g. as GitHub release assets, as long as the URL is HTTPS. The template itself must be in S3 for a quick-create link.
@@ -66,6 +66,6 @@ Releases are reproducible: rebuilding the same commit produces byte-identical zi
 
 ## Operations
 
-- **Logs**: `/s3ndless/<stack>/api`, `/sweeper`, `/setup`, … Request bodies, passwords and tokens are never logged.
+- **Logs**: `/sendless/<stack>/api`, `/sweeper`, `/setup`, … Request bodies, passwords and tokens are never logged.
 - **Costs**: pay-per-use only. With no traffic, the main costs are S3 storage of files that are still active and small amounts for DynamoDB and logs.
 - **Region**: everything is created in the stack's Region. CloudFront is global, but it serves only the static app and proxies `/api/*`; files are downloaded directly from the regional S3 endpoint.

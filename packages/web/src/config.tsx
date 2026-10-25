@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { Branding, PublicConfig } from '@s3ndless/shared';
+import type { Branding, PublicConfig } from '@sendless/shared';
 import { ApiError, publicApi } from './api/client.js';
 
 interface ConfigState {

@@ -1,5 +1,5 @@
-import type { Edition, LicenseInfo, ProFeature } from '@s3ndless/shared';
-import { verifyLicense } from '@s3ndless/ee/api';
+import type { Edition, LicenseInfo, ProFeature } from '@sendless/shared';
+import { verifyLicense } from '@sendless/ee/api';
 import type { Settings } from './settings.js';
 
 export interface EditionState {

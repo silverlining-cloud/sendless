@@ -1,10 +1,10 @@
-// S3ndless Pro. Licensed under the S3ndless Enterprise License (see ee/LICENSE).
+// Sendless Pro. Licensed under the Sendless Enterprise License (see ee/LICENSE).
 import { useState, type FormEvent } from 'react';
-import type { AdminSettings, Policies } from '@s3ndless/shared';
-import { api } from '@s3ndless/web/api';
-import { useConfig } from '@s3ndless/web/config';
-import { useI18n } from '@s3ndless/web/i18n';
-import { Alert, AsyncView, Button, Card, Checkbox, Field, Input, ProGate, useAsync } from '@s3ndless/web/ui';
+import type { AdminSettings, Policies } from '@sendless/shared';
+import { api } from '@sendless/web/api';
+import { useConfig } from '@sendless/web/config';
+import { useI18n } from '@sendless/web/i18n';
+import { Alert, AsyncView, Button, Card, Checkbox, Field, Input, ProGate, useAsync } from '@sendless/web/ui';
 
 const list = (value: string) =>
   value

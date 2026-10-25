@@ -1,4 +1,4 @@
-import { MAX_PARTS, MiB, MIN_PART_SIZE } from '@s3ndless/shared';
+import { MAX_PARTS, MiB, MIN_PART_SIZE } from '@sendless/shared';
 
 /** Smallest part size (whole MiB, at least 8 MiB) that fits the file into S3's 10,000-part limit. */
 export function planParts(size: number): { partSize: number; partCount: number } {

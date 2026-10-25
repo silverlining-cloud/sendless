@@ -1,4 +1,4 @@
-import type { PublicConfig } from '@s3ndless/shared';
+import type { PublicConfig } from '@sendless/shared';
 import { editionFor, hasFeature } from '../edition.js';
 import type { Deps } from '../ports.js';
 import { effectiveLimits } from './limits.js';

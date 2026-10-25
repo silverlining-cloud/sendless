@@ -1,11 +1,11 @@
-// S3ndless Pro. Licensed under the S3ndless Enterprise License (see ee/LICENSE).
+// Sendless Pro. Licensed under the Sendless Enterprise License (see ee/LICENSE).
 import { useState } from 'react';
-import type { EventInfo, Page } from '@s3ndless/shared';
-import { api, requestRaw } from '@s3ndless/web/api';
-import { dateTime } from '@s3ndless/web/format';
-import { useI18n, type MessageKey } from '@s3ndless/web/i18n';
-import { Alert, AsyncView, Button, Card, Field, Input, isApiError, ProGate, useAsync } from '@s3ndless/web/ui';
-import { DownloadIcon } from '@s3ndless/web/icons';
+import type { EventInfo, Page } from '@sendless/shared';
+import { api, requestRaw } from '@sendless/web/api';
+import { dateTime } from '@sendless/web/format';
+import { useI18n, type MessageKey } from '@sendless/web/i18n';
+import { Alert, AsyncView, Button, Card, Field, Input, isApiError, ProGate, useAsync } from '@sendless/web/ui';
+import { DownloadIcon } from '@sendless/web/icons';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -34,11 +34,11 @@ export function AuditPage() {
     setNotice(null);
     try {
       const response = await requestRaw(`/api/admin/audit/export?from=${from}&to=${to}`);
-      if (response.headers.get('x-s3ndless-truncated') === 'true') setNotice({ tone: 'warning', text: t('pro.audit.truncated') });
+      if (response.headers.get('x-sendless-truncated') === 'true') setNotice({ tone: 'warning', text: t('pro.audit.truncated') });
       const url = URL.createObjectURL(await response.blob());
       const a = document.createElement('a');
       a.href = url;
-      a.download = `s3ndless-audit-${from}_${to}.csv`;
+      a.download = `sendless-audit-${from}_${to}.csv`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch (err) {

@@ -1,5 +1,5 @@
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
-import { CognitoIdentityProviders } from '@s3ndless/ee/api';
+import { CognitoIdentityProviders } from '@sendless/ee/api';
 import { CognitoAuthenticator, CognitoDirectory } from './adapters/cognito.js';
 import { DynamoStore } from './adapters/dynamo-store.js';
 import { disabledMailer, SesMailer } from './adapters/mailers.js';

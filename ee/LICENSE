@@ -1,14 +1,14 @@
-S3ndless Enterprise License
+Sendless Enterprise License
 
 DRAFT — to be reviewed by legal counsel before publication.
 
 Copyright (c) 2026 SilverLining.Cloud GmbH
 
-This license applies to all files in the "ee" directory of the S3ndless repository
+This license applies to all files in the "ee" directory of the Sendless repository
 ("Pro Software"). Files outside that directory are licensed under the Apache License 2.0.
 
 1. Subscription required for production use. You may use the Pro Software in production
-   only while you hold a valid S3ndless Pro license key issued by SilverLining.Cloud GmbH
+   only while you hold a valid Sendless Pro license key issued by SilverLining.Cloud GmbH
    ("Licensor") for the number of deployments and the features you use, and only in
    accordance with the terms of your subscription.
 

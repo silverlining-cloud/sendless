@@ -1,4 +1,4 @@
-# S3ndless
+# Sendless
 
 **Secure, serverless file transfer that runs in your own AWS account.**
 Send files with expiring, password-protected links. Collect files from people who have no account.
@@ -30,11 +30,11 @@ No servers to run, nothing leaves your account, and one click to deploy.
 
 ## Deploy
 
-1. Open the **Launch stack** link for the release you want, or create a stack from `s3ndless.yaml` in the CloudFormation console. Choose any Region.
+1. Open the **Launch stack** link for the release you want, or create a stack from `sendless.yaml` in the CloudFormation console. Choose any Region.
 2. Enter the **administrator email**. Everything else is optional: email sending, custom domain, self sign-up, malware scanning.
 3. Wait about 5 minutes. The administrator receives a temporary password by email. Open the `AppUrl` from the stack outputs and sign in.
 
-To remove S3ndless, delete the stack. The buckets are emptied first, so nothing is left behind.
+To remove Sendless, delete the stack. The buckets are emptied first, so nothing is left behind.
 
 See [docs/deployment.md](docs/deployment.md) for parameters, custom domains, email, upgrades and publishing your own release.
 
@@ -60,7 +60,7 @@ npm run dev        # http://localhost:5173 — runs the real API with in-memory 
 npm run dev:pro    # same, with Pro features unlocked by a throwaway development license
 npm test           # unit, service and store contract tests
 npm run typecheck
-npm run release -- --base-url https://<bucket>.s3.amazonaws.com/s3ndless/v1.0.0
+npm run release -- --base-url https://<bucket>.s3.amazonaws.com/sendless/v1.0.0
 ```
 
 Sign in locally as `admin@example.com` or `user@example.com` (no password in dev mode). See [docs/development.md](docs/development.md).
@@ -68,11 +68,11 @@ Sign in locally as `admin@example.com` or `user@example.com` (no password in dev
 ## Repository layout
 
 ```
-template/s3ndless.yaml   CloudFormation template (the one-click deployable)
+template/sendless.yaml   CloudFormation template (the one-click deployable)
 packages/shared          API types and validation shared by backend and frontend
 packages/api             Lambda handlers, services, AWS and in-memory adapters, dev server
 packages/web             React single-page app
-ee/                      Pro features, under the S3ndless Enterprise License
+ee/                      Pro features, under the Sendless Enterprise License
 scripts/                 dev, build, release, publish
 docs/                    architecture, deployment, development, selling
 ```
@@ -80,6 +80,6 @@ docs/                    architecture, deployment, development, selling
 ## License
 
 Everything outside `ee/` is licensed under the [Apache License 2.0](LICENSE).
-The `ee/` directory contains the Pro features and is licensed under the [S3ndless Enterprise License](ee/LICENSE): you may read and modify it, but using Pro features in production requires a valid license key.
+The `ee/` directory contains the Pro features and is licensed under the [Sendless Enterprise License](ee/LICENSE): you may read and modify it, but using Pro features in production requires a valid license key.
 
 Copyright © 2026 SilverLining.Cloud GmbH.

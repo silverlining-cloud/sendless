@@ -1,5 +1,5 @@
-import type { AdminSettings, Me, SettingsInput, UserInfo } from '@s3ndless/shared';
-import { verifyLicense } from '@s3ndless/ee/api';
+import type { AdminSettings, Me, SettingsInput, UserInfo } from '@sendless/shared';
+import { verifyLicense } from '@sendless/ee/api';
 import { editionFor } from '../edition.js';
 import { badRequest, conflict, type HttpRequest } from '../http.js';
 import type { Deps, Principal } from '../ports.js';

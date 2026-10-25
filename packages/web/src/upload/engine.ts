@@ -1,4 +1,4 @@
-import type { FinalizeResult, PartUrl, UploadPlan } from '@s3ndless/shared';
+import type { FinalizeResult, PartUrl, UploadPlan } from '@sendless/shared';
 import { ApiError, publicApi } from '../api/client.js';
 
 /**

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { AdminSettings } from '@s3ndless/shared';
+import type { AdminSettings } from '@sendless/shared';
 import { api } from '../../api/client.js';
 import { Alert, AsyncView, Badge, Button, Card, Field, TextArea, useAsync } from '../../components/ui.js';
 import { useReloadConfig } from '../../config.js';

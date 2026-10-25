@@ -6,7 +6,7 @@ import type {
   RequestSummary,
   SubmissionInput,
   SubmissionResult,
-} from '@s3ndless/shared';
+} from '@sendless/shared';
 import { hashPassword, randomId } from '../crypto.js';
 import { editionFor } from '../edition.js';
 import { badRequest, gone, notFound, type HttpRequest } from '../http.js';

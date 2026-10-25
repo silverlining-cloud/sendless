@@ -16,8 +16,8 @@ import {
   type TransferSummary,
   type UnlockResult,
   type UploadPlan,
-} from '@s3ndless/shared';
-import { checkFileScan } from '@s3ndless/ee/api';
+} from '@sendless/shared';
+import { checkFileScan } from '@sendless/ee/api';
 import { hashPassword, randomId, safeEqual, verifyPassword } from '../crypto.js';
 import { editionFor, hasFeature } from '../edition.js';
 import { contentDisposition, planParts, safeContentType, sanitizeFileName } from '../files.js';

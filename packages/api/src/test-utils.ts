@@ -1,4 +1,4 @@
-import { MemoryIdentityProviders } from '@s3ndless/ee/api';
+import { MemoryIdentityProviders } from '@sendless/ee/api';
 import { DevAuthenticator, MemoryDirectory } from './adapters/dev.js';
 import { ConsoleMailer } from './adapters/mailers.js';
 import { MemoryStore } from './adapters/memory-store.js';
@@ -127,7 +127,7 @@ export function createHarness(options: { malwareScanning?: boolean; email?: bool
           method,
           path: pathname!,
           query: Object.fromEntries(new URLSearchParams(qs ?? '')),
-          headers: opts.as ? { 'x-s3ndless-token': `dev:${opts.as}@example.com` } : {},
+          headers: opts.as ? { 'x-sendless-token': `dev:${opts.as}@example.com` } : {},
           body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
           ...(opts.ip ? { ip: opts.ip } : {}),
         }),

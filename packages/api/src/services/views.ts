@@ -1,4 +1,4 @@
-import type { FileInfo, RequestSummary, TransferSummary } from '@s3ndless/shared';
+import type { FileInfo, RequestSummary, TransferSummary } from '@sendless/shared';
 import type { RequestRecord, StoredFile, TransferRecord } from '../model.js';
 
 export const iso = (ms: number) => new Date(ms).toISOString();

@@ -9,10 +9,10 @@ import {
   UpdateUserPoolClientCommand,
   type UpdateUserPoolClientCommandInput,
 } from '@aws-sdk/client-cognito-identity-provider';
-import type { SsoProviderInfo, SsoProviderInput } from '@s3ndless/shared';
-import { conflict, notFound } from '@s3ndless/api/http';
-import type { SystemConfig } from '@s3ndless/api/model';
-import type { Deps, IdentityProviders } from '@s3ndless/api/ports';
+import type { SsoProviderInfo, SsoProviderInput } from '@sendless/shared';
+import { conflict, notFound } from '@sendless/api/http';
+import type { SystemConfig } from '@sendless/api/model';
+import type { Deps, IdentityProviders } from '@sendless/api/ports';
 import { verifyLicense } from './license.js';
 
 /**

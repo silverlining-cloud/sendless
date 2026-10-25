@@ -1,6 +1,6 @@
 {
-  "name": "s3ndless",
-  "version": "1.0.1",
+  "name": "sendless",
+  "version": "1.1.0",
   "private": true,
   "description": "Serverless, self-hosted file transfer for AWS. Expiring links, password protection, file requests. Runs entirely in your own AWS account.",
   "license": "Apache-2.0",
@@ -17,12 +17,12 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:pro": "node scripts/dev.mjs --pro",
-    "build": "npm run build -w @s3ndless/web && node scripts/build-backend.mjs",
+    "build": "npm run build -w @sendless/web && node scripts/build-backend.mjs",
     "release": "node scripts/release.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint:template": "cfn-lint template/s3ndless.yaml && python3 -I scripts/check-bootstrap.py",
+    "lint:template": "cfn-lint template/sendless.yaml && python3 -I scripts/check-bootstrap.py",
     "e2e": "node scripts/e2e.mjs",
     "license:keygen": "tsx ee/tools/license-keygen.ts",
     "license:issue": "tsx ee/tools/license-issue.ts"

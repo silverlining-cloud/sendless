@@ -1,5 +1,5 @@
 /** Header that carries the Cognito ID token. CloudFront OAC replaces `Authorization`. */
-export const TOKEN_HEADER = 'x-s3ndless-token';
+export const TOKEN_HEADER = 'x-sendless-token';
 
 /** Header with the SHA-256 (hex) of the request body, required by CloudFront OAC for Lambda URLs. */
 export const CONTENT_SHA256_HEADER = 'x-amz-content-sha256';
