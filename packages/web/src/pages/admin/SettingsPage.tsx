@@ -24,7 +24,7 @@ function SettingsForm({ initial }: { initial: AdminSettings }) {
     setBusy(true);
     setMessage(null);
     try {
-      const branding = { ...b, appName: b.appName.trim(), privacyUrl: optionalUrl(b.privacyUrl), imprintUrl: optionalUrl(b.imprintUrl) };
+      const branding = { privacyUrl: optionalUrl(b.privacyUrl), imprintUrl: optionalUrl(b.imprintUrl) };
       const saved = await api.put<AdminSettings>('/api/admin/settings', { ...s, branding });
       setS(saved.settings);
       await reloadConfig();
@@ -38,11 +38,8 @@ function SettingsForm({ initial }: { initial: AdminSettings }) {
 
   return (
     <form className="stack" onSubmit={save}>
-      <Card title={t('admin.general')}>
+      <Card title={t('admin.legalLinks')}>
         <div className="form-grid">
-          <Field label={t('admin.appName')}>
-            {(id) => <Input id={id} required maxLength={60} value={b.appName} onChange={(e) => setBranding({ appName: e.target.value })} />}
-          </Field>
           <Field label={t('admin.privacyUrl')} optional>
             {(id) => <Input id={id} type="url" value={b.privacyUrl ?? ''} placeholder="https://" onChange={(e) => setBranding({ privacyUrl: e.target.value || null })} />}
           </Field>

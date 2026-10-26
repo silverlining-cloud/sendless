@@ -311,11 +311,12 @@ try {
   await check('settings round-trip and show up in the public config', async () => {
     const current = (await call('GET', '/api/admin/settings')).json;
     assert(current.system.region === region, current.system.region);
-    const updated = await call('PUT', '/api/admin/settings', { ...current.settings, branding: { ...current.settings.branding, appName: 'Sendless E2E' } });
+    const privacyUrl = 'https://example.com/sendless-e2e-privacy';
+    const updated = await call('PUT', '/api/admin/settings', { ...current.settings, branding: { ...current.settings.branding, privacyUrl } });
     assert(updated.status === 200, `put ${updated.status} ${JSON.stringify(updated.json)}`);
     await sleep(11_000); // settings are cached for 10 s per Lambda container
     const config = await call('GET', '/api/public/config', undefined, { auth: false });
-    assert(config.json.branding.appName === 'Sendless E2E', config.json.branding.appName);
+    assert(config.json.branding.privacyUrl === privacyUrl, config.json.branding.privacyUrl);
     await call('PUT', '/api/admin/settings', current.settings);
   });
   await check('user directory lists Cognito users', async () => {

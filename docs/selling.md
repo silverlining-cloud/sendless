@@ -5,7 +5,7 @@ How the open core, the license key and AWS Marketplace fit together.
 ## The model
 
 - **Community** (Apache-2.0) is the whole product for small teams. It is the trust and discovery engine: GitHub, the one-click template, reproducible releases.
-- **Pro** (Enterprise License, `ee/`) adds what compliance buyers pay for: SSO, malware scanning, an exportable audit log and policies. It also adds branding (logo, colors, texts), which will later include branded emails and a branded sign-in page.
+- **Pro** (Enterprise License, `ee/`) adds what compliance buyers pay for: SSO, malware scanning, an exportable audit log and policies. It also adds branding (name, logo, colors, texts), which will later include branded emails and a branded sign-in page.
 - Both run from **the same template and artifacts**. Pro is unlocked at runtime by pasting a license key into **Admin → License**. There is no separate build and no phone-home.
 
 ## License keys

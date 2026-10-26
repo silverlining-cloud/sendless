@@ -37,6 +37,7 @@ function BrandingForm({ initial }: { initial: ProBranding }) {
     try {
       const saved = await api.put<ProBranding>('/api/admin/branding', {
         ...b,
+        appName: b.appName.trim(),
         logoUrl: optional(b.logoUrl),
         welcomeTitle: optional(b.welcomeTitle),
         welcomeText: optional(b.welcomeText),
@@ -54,11 +55,16 @@ function BrandingForm({ initial }: { initial: ProBranding }) {
 
   return (
     <form className="stack" onSubmit={save}>
-      <Card title={t('pro.branding.logoAndColors')}>
+      <Card title={t('pro.branding.nameLogoColors')}>
         <p className="muted">{t('pro.branding.intro')}</p>
-        <Field label={t('admin.logoUrl')} optional hint={t('pro.branding.logoHint')}>
-          {(id, d) => <Input id={id} aria-describedby={d} type="url" value={b.logoUrl ?? ''} placeholder="https://" onChange={(e) => set({ logoUrl: e.target.value || null })} />}
-        </Field>
+        <div className="form-grid">
+          <Field label={t('admin.appName')} hint={t('pro.branding.nameHint')}>
+            {(id, d) => <Input id={id} aria-describedby={d} required maxLength={60} value={b.appName} onChange={(e) => set({ appName: e.target.value })} />}
+          </Field>
+          <Field label={t('admin.logoUrl')} optional hint={t('pro.branding.logoHint')}>
+            {(id, d) => <Input id={id} aria-describedby={d} type="url" value={b.logoUrl ?? ''} placeholder="https://" onChange={(e) => set({ logoUrl: e.target.value || null })} />}
+          </Field>
+        </div>
         <div className="form-grid form-grid-3">
           <ColorField label={t('admin.primaryColor')} value={b.primaryColor} onChange={(v) => set({ primaryColor: v })} />
           <ColorField label={t('admin.backgroundColor')} value={b.backgroundColor} onChange={(v) => set({ backgroundColor: v })} />

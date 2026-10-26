@@ -41,15 +41,15 @@ describe('app', () => {
     expect(bad.statusCode).toBe(400);
     const ok = await h.call('PUT', '/api/admin/settings', {
       as: 'admin',
-      body: { ...current, branding: { ...current.branding, appName: 'Acme Files' } },
+      body: { ...current, branding: { ...current.branding, privacyUrl: 'https://acme.example/privacy' } },
     });
-    expect(ok.json.settings.branding.appName).toBe('Acme Files');
-    expect((await h.call('GET', '/api/public/config')).json.branding.appName).toBe('Acme Files');
+    expect(ok.json.settings.branding.privacyUrl).toBe('https://acme.example/privacy');
+    expect((await h.call('GET', '/api/public/config')).json.branding.privacyUrl).toBe('https://acme.example/privacy');
   });
 
-  it('keeps logo, colors and texts for Pro', async () => {
+  it('keeps name, logo, colors and texts for Pro', async () => {
     const h = createHarness();
-    const pro = { logoUrl: 'https://acme.example/logo.png', primaryColor: '#FF0000', backgroundColor: '#FFFFFF', textColor: '#000000', welcomeTitle: 'Hi', welcomeText: null, footerText: 'Acme' };
+    const pro = { appName: 'Acme Files', logoUrl: 'https://acme.example/logo.png', primaryColor: '#FF0000', backgroundColor: '#FFFFFF', textColor: '#000000', welcomeTitle: 'Hi', welcomeText: null, footerText: 'Acme' };
     const put = await h.call('PUT', '/api/admin/branding', { as: 'admin', body: pro });
     expect(put.json.error.code).toBe('pro_required');
 
@@ -61,7 +61,7 @@ describe('app', () => {
     // Values stored earlier (e.g. under an expired license) don't apply without one.
     await h.deps.updateSettings((s) => ({ ...s, branding: { ...s.branding, ...pro } }));
     const config = (await h.call('GET', '/api/public/config')).json;
-    expect(config.branding).toMatchObject({ logoUrl: null, primaryColor: '#2F6FB5', welcomeTitle: null, footerText: null });
+    expect(config.branding).toMatchObject({ appName: 'Sendless', logoUrl: null, primaryColor: '#2F6FB5', welcomeTitle: null, footerText: null });
   });
 
   it('manages users but keeps at least one admin', async () => {

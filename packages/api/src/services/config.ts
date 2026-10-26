@@ -5,13 +5,13 @@ import { DEFAULT_SETTINGS, type Settings } from '../settings.js';
 import { effectiveLimits } from './limits.js';
 
 /**
- * Logo, colors and texts need the Pro `branding` feature. Without it they fall back to the defaults;
- * the stored values are kept and apply again once a license is installed.
+ * Name, logo, colors and texts need the Pro `branding` feature. Without it they fall back to the
+ * Sendless defaults; the stored values are kept and apply again once a license is installed.
  */
 export function effectiveBranding(settings: Settings, edition: EditionState): Branding {
   if (hasFeature(edition, 'branding')) return settings.branding;
-  const { appName, privacyUrl, imprintUrl } = settings.branding;
-  return { ...DEFAULT_SETTINGS.branding, appName, privacyUrl, imprintUrl };
+  const { privacyUrl, imprintUrl } = settings.branding;
+  return { ...DEFAULT_SETTINGS.branding, privacyUrl, imprintUrl };
 }
 
 export async function publicConfig(deps: Deps): Promise<PublicConfig> {

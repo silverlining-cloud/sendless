@@ -43,9 +43,9 @@ const defaultPolicies = {
 };
 
 describe('Pro: branding', () => {
-  const branding = { logoUrl: 'https://acme.example/logo.png', primaryColor: '#FF0000', backgroundColor: '#FFFFFF', textColor: '#000000', welcomeTitle: 'Welcome to Acme', welcomeText: null, footerText: 'Acme GmbH' };
+  const branding = { appName: 'Acme Files', logoUrl: 'https://acme.example/logo.png', primaryColor: '#FF0000', backgroundColor: '#FFFFFF', textColor: '#000000', welcomeTitle: 'Welcome to Acme', welcomeText: null, footerText: 'Acme GmbH' };
 
-  it('applies logo, colors and texts and keeps them apart from the core settings', async () => {
+  it('applies name, logo, colors and texts and keeps them apart from the core settings', async () => {
     const h = await licensed(['branding']);
     const css = await h.call('PUT', '/api/admin/branding', { as: 'admin', body: { ...branding, primaryColor: 'red;}body{display:none' } });
     expect(css.statusCode).toBe(400);
@@ -53,8 +53,8 @@ describe('Pro: branding', () => {
 
     const admin = (await h.call('GET', '/api/admin/settings', { as: 'admin' })).json;
     expect(admin.branding).toEqual(branding);
-    await h.call('PUT', '/api/admin/settings', { as: 'admin', body: { ...admin.settings, branding: { ...admin.settings.branding, appName: 'Acme Files' } } });
-    expect((await h.call('GET', '/api/public/config')).json.branding).toMatchObject({ ...branding, appName: 'Acme Files' });
+    await h.call('PUT', '/api/admin/settings', { as: 'admin', body: { ...admin.settings, branding: { privacyUrl: 'https://acme.example/privacy', imprintUrl: null } } });
+    expect((await h.call('GET', '/api/public/config')).json.branding).toMatchObject({ ...branding, privacyUrl: 'https://acme.example/privacy' });
   });
 
   it('needs the branding feature', async () => {

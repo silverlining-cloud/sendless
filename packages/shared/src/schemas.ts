@@ -107,12 +107,12 @@ export const brandingSchema = z.object({
 });
 export type Branding = z.infer<typeof brandingSchema>;
 
-/** The part of the branding every edition can change: the name and the legal links. */
-export const generalBrandingSchema = brandingSchema.pick({ appName: true, privacyUrl: true, imprintUrl: true });
+/** The part of the branding every edition can change: the legal links. */
+export const generalBrandingSchema = brandingSchema.pick({ privacyUrl: true, imprintUrl: true });
 export type GeneralBranding = z.infer<typeof generalBrandingSchema>;
 
-/** Sendless Pro: logo, colors and texts. Branded emails and sign-in pages belong to this feature too. */
-export const proBrandingSchema = brandingSchema.omit({ appName: true, privacyUrl: true, imprintUrl: true });
+/** Sendless Pro: name, logo, colors and texts. Branded emails and sign-in pages belong to this feature too. */
+export const proBrandingSchema = brandingSchema.omit({ privacyUrl: true, imprintUrl: true });
 export type ProBranding = z.infer<typeof proBrandingSchema>;
 
 export const policiesSchema = z.object({

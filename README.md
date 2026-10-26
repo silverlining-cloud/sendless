@@ -19,7 +19,7 @@ No servers to run, nothing leaves your account, and one click to deploy.
 | **File requests**: let anyone upload files to you, without an account | ✓ | ✓ |
 | Email the link and get notified on download (Amazon SES) | ✓ | ✓ |
 | Activity log per transfer (who opened, which file, IP, country) | ✓ | ✓ |
-| Your own name, privacy and imprint links | ✓ | ✓ |
+| Privacy and imprint links | ✓ | ✓ |
 | User management, invitations, optional self sign-up by email domain, MFA | ✓ | ✓ |
 | Guaranteed deletion: sweeper plus an S3 lifecycle hard limit | ✓ | ✓ |
 | English and German UI, light and dark theme | ✓ | ✓ |
@@ -27,7 +27,7 @@ No servers to run, nothing leaves your account, and one click to deploy.
 | **Malware scanning** with GuardDuty, downloads blocked until clean | | ✓ |
 | **Audit log** for the whole installation with CSV export | | ✓ |
 | **Policies**: mandatory passwords, maximum lifetime, blocked file types, allowed recipient domains | | ✓ |
-| **Branding**: your logo, colors, welcome and footer texts | | ✓ |
+| **Branding**: your name, logo, colors, welcome and footer texts | | ✓ |
 
 ## Deploy
 

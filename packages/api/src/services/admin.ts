@@ -23,10 +23,10 @@ export function me(principal: Principal): Me {
 export async function getAdminSettings(deps: Deps): Promise<AdminSettings> {
   const [settings, system] = await Promise.all([deps.settings(), deps.system()]);
   const edition = editionFor(settings, deps.now());
-  const { appName, privacyUrl, imprintUrl, ...branding } = settings.branding;
+  const { privacyUrl, imprintUrl, ...branding } = settings.branding;
   return {
     settings: {
-      branding: { appName, privacyUrl, imprintUrl },
+      branding: { privacyUrl, imprintUrl },
       defaults: settings.defaults,
       limits: settings.limits,
       showSenderEmail: settings.showSenderEmail,
@@ -51,7 +51,7 @@ export async function updateSettings(deps: Deps, principal: Principal, input: Se
   if (input.defaults.expiresInHours > maxHours) {
     throw badRequest(`The default lifetime cannot exceed ${maxHours} hours (MaxRetentionDays)`);
   }
-  // Logo, colors and texts are saved through the Pro branding route and stay as they are.
+  // Name, logo, colors and texts are saved through the Pro branding route and stay as they are.
   await deps.updateSettings((current) => ({ ...current, ...input, branding: { ...current.branding, ...input.branding } }));
   await recordEvent(deps, { subject: ADMIN_SUBJECT, action: 'settings.updated', actor: userActor(principal), req });
   return getAdminSettings(deps);

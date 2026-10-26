@@ -106,7 +106,7 @@ export function registerProRoutes(r: Router, ctx: ProRouteContext): void {
     return json(200, policies);
   });
 
-  // ----- branding: logo, colors and texts (name and legal links are in the core settings) -----
+  // ----- branding: name, logo, colors and texts (the legal links are in the core settings) -----
   r.put('/api/admin/branding', async (req) => {
     const principal = await ctx.requireAdmin(req);
     await ctx.requireFeature('branding');
