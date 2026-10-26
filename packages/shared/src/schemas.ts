@@ -107,6 +107,14 @@ export const brandingSchema = z.object({
 });
 export type Branding = z.infer<typeof brandingSchema>;
 
+/** The part of the branding every edition can change: the name and the legal links. */
+export const generalBrandingSchema = brandingSchema.pick({ appName: true, privacyUrl: true, imprintUrl: true });
+export type GeneralBranding = z.infer<typeof generalBrandingSchema>;
+
+/** Sendless Pro: logo, colors and texts. Branded emails and sign-in pages belong to this feature too. */
+export const proBrandingSchema = brandingSchema.omit({ appName: true, privacyUrl: true, imprintUrl: true });
+export type ProBranding = z.infer<typeof proBrandingSchema>;
+
 export const policiesSchema = z.object({
   requirePassword: z.boolean(),
   minPasswordLength: z.number().int().min(1).max(128),
@@ -124,7 +132,7 @@ export const policiesSchema = z.object({
 export type Policies = z.infer<typeof policiesSchema>;
 
 export const settingsSchema = z.object({
-  branding: brandingSchema,
+  branding: generalBrandingSchema,
   defaults: z.object({
     expiresInHours: z.number().int().min(1).max(HOURS_PER_YEAR),
     maxOpens: z.number().int().min(1).max(100_000).nullable(),

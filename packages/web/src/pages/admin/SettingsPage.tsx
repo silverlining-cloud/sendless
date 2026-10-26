@@ -1,25 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { GiB, type AdminSettings, type SettingsInput } from '@sendless/shared';
 import { api } from '../../api/client.js';
-import { Alert, AsyncView, Button, Card, Checkbox, Field, Input, Select, TextArea, useAsync } from '../../components/ui.js';
-import { applyTheme, useReloadConfig } from '../../config.js';
+import { Alert, AsyncView, Button, Card, Checkbox, Field, Input, Select, useAsync } from '../../components/ui.js';
+import { useReloadConfig } from '../../config.js';
 import { duration, lifetimeOptions } from '../../format.js';
 import { useI18n } from '../../i18n/index.js';
 
-function ColorField({ label, value, onChange }: { label: string; value: string; onChange(v: string): void }) {
-  return (
-    <Field label={label}>
-      {(id) => (
-        <div className="color-field">
-          <input type="color" aria-label={label} value={value} onChange={(e) => onChange(e.target.value.toUpperCase())} />
-          <Input id={id} value={value} pattern="#[0-9a-fA-F]{6}" maxLength={7} onChange={(e) => onChange(e.target.value)} />
-        </div>
-      )}
-    </Field>
-  );
-}
-
-const nullable = (v: string) => (v.trim() ? v.trim() : null);
+/** Optional URLs: kept as typed while editing, trimmed when saving; empty means none. */
+const optionalUrl = (v: string | null) => v?.trim() || null;
 
 function SettingsForm({ initial }: { initial: AdminSettings }) {
   const { t } = useI18n();
@@ -36,9 +24,9 @@ function SettingsForm({ initial }: { initial: AdminSettings }) {
     setBusy(true);
     setMessage(null);
     try {
-      const saved = await api.put<AdminSettings>('/api/admin/settings', s);
+      const branding = { ...b, appName: b.appName.trim(), privacyUrl: optionalUrl(b.privacyUrl), imprintUrl: optionalUrl(b.imprintUrl) };
+      const saved = await api.put<AdminSettings>('/api/admin/settings', { ...s, branding });
       setS(saved.settings);
-      applyTheme(saved.settings.branding);
       await reloadConfig();
       setMessage({ tone: 'success', text: t('common.saved') });
     } catch (err) {
@@ -50,34 +38,16 @@ function SettingsForm({ initial }: { initial: AdminSettings }) {
 
   return (
     <form className="stack" onSubmit={save}>
-      <Card title={t('admin.branding')}>
+      <Card title={t('admin.general')}>
         <div className="form-grid">
           <Field label={t('admin.appName')}>
             {(id) => <Input id={id} required maxLength={60} value={b.appName} onChange={(e) => setBranding({ appName: e.target.value })} />}
           </Field>
-          <Field label={t('admin.logoUrl')} optional>
-            {(id) => <Input id={id} type="url" value={b.logoUrl ?? ''} placeholder="https://" onChange={(e) => setBranding({ logoUrl: nullable(e.target.value) })} />}
-          </Field>
-          <ColorField label={t('admin.primaryColor')} value={b.primaryColor} onChange={(v) => setBranding({ primaryColor: v })} />
-          <ColorField label={t('admin.backgroundColor')} value={b.backgroundColor} onChange={(v) => setBranding({ backgroundColor: v })} />
-          <ColorField label={t('admin.textColor')} value={b.textColor} onChange={(v) => setBranding({ textColor: v })} />
-          <Field label={t('admin.welcomeTitle')} optional>
-            {(id) => <Input id={id} maxLength={120} value={b.welcomeTitle ?? ''} onChange={(e) => setBranding({ welcomeTitle: nullable(e.target.value) })} />}
-          </Field>
-        </div>
-        <p className="hint">{t('admin.colorsLightOnly')}</p>
-        <Field label={t('admin.welcomeText')} optional>
-          {(id) => <TextArea id={id} maxLength={1000} value={b.welcomeText ?? ''} onChange={(e) => setBranding({ welcomeText: nullable(e.target.value) })} />}
-        </Field>
-        <div className="form-grid">
-          <Field label={t('admin.footerText')} optional>
-            {(id) => <Input id={id} maxLength={500} value={b.footerText ?? ''} onChange={(e) => setBranding({ footerText: nullable(e.target.value) })} />}
-          </Field>
           <Field label={t('admin.privacyUrl')} optional>
-            {(id) => <Input id={id} type="url" value={b.privacyUrl ?? ''} placeholder="https://" onChange={(e) => setBranding({ privacyUrl: nullable(e.target.value) })} />}
+            {(id) => <Input id={id} type="url" value={b.privacyUrl ?? ''} placeholder="https://" onChange={(e) => setBranding({ privacyUrl: e.target.value || null })} />}
           </Field>
           <Field label={t('admin.imprintUrl')} optional>
-            {(id) => <Input id={id} type="url" value={b.imprintUrl ?? ''} placeholder="https://" onChange={(e) => setBranding({ imprintUrl: nullable(e.target.value) })} />}
+            {(id) => <Input id={id} type="url" value={b.imprintUrl ?? ''} placeholder="https://" onChange={(e) => setBranding({ imprintUrl: e.target.value || null })} />}
           </Field>
         </div>
       </Card>

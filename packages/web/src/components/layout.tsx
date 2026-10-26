@@ -2,10 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 import { DEFAULT_APP_NAME, SOURCE_URL } from '@sendless/shared';
 import { useAuth } from '../auth/AuthProvider.js';
-import { setColorScheme, storedColorScheme, type ColorScheme } from '../color-scheme.js';
 import { useConfig } from '../config.js';
-import { useI18n, type MessageKey } from '../i18n/index.js';
-import { GitHubIcon, InboxIcon, ListIcon, MonitorIcon, MoonIcon, SendIcon, SettingsIcon, SunIcon } from './icons.js';
+import { useI18n } from '../i18n/index.js';
+import { GitHubIcon, InboxIcon, ListIcon, SendIcon, SettingsIcon, ShieldIcon } from './icons.js';
 import { Button, Card, Field, Input, Loading } from './ui.js';
 
 /** The built-in logos belong to Sendless; a renamed installation without its own logo shows its name instead. */
@@ -49,69 +48,17 @@ function Brand() {
   );
 }
 
-function LanguageSwitch() {
-  const { locale, setLocale, t } = useI18n();
-  return (
-    <div className="segmented" role="group" aria-label={t('nav.language')}>
-      {(['en', 'de'] as const).map((l) => (
-        <button key={l} type="button" className={l === locale ? 'active' : ''} aria-pressed={l === locale} onClick={() => setLocale(l)}>
-          {l.toUpperCase()}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-const SCHEMES: { scheme: ColorScheme; label: MessageKey; Icon: typeof SunIcon }[] = [
-  { scheme: 'light', label: 'footer.themeLight', Icon: SunIcon },
-  { scheme: 'system', label: 'footer.themeSystem', Icon: MonitorIcon },
-  { scheme: 'dark', label: 'footer.themeDark', Icon: MoonIcon },
-];
-
-function ColorSchemeSwitch() {
-  const { t } = useI18n();
-  const [current, setCurrent] = useState(storedColorScheme);
-  return (
-    <div className="segmented" role="group" aria-label={t('footer.theme')}>
-      {SCHEMES.map(({ scheme, label, Icon }) => (
-        <button
-          key={scheme}
-          type="button"
-          className={scheme === current ? 'active' : ''}
-          aria-pressed={scheme === current}
-          aria-label={t(label)}
-          title={t(label)}
-          onClick={() => {
-            setColorScheme(scheme);
-            setCurrent(scheme);
-          }}
-        >
-          <Icon size={14} />
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function Footer() {
   const { branding, edition } = useConfig();
   const { t } = useI18n();
+  const community = edition === 'community';
+  const text = branding.footerText ?? (community ? t('footer.communityEdition') : null);
+  if (!text && !branding.privacyUrl && !branding.imprintUrl && !community) return null;
   return (
     <footer className="footer">
       <div className="container footer-inner">
-        <div className="footer-text">
-          {branding.footerText && <span>{branding.footerText}</span>}
-          {edition === 'community' && (
-            <span className="edition">
-              {t('footer.communityEdition')}
-              <span aria-hidden="true"> · </span>
-              <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" title={t('footer.sourceCodeTitle')}>
-                <GitHubIcon size={14} /> {t('footer.sourceCode')}
-              </a>
-            </span>
-          )}
-        </div>
-        <nav>
+        <span className="footer-text">{text}</span>
+        <nav aria-label={t('footer.links')}>
           {branding.privacyUrl && (
             <a href={branding.privacyUrl} target="_blank" rel="noopener noreferrer">
               {t('footer.privacy')}
@@ -122,8 +69,12 @@ function Footer() {
               {t('footer.imprint')}
             </a>
           )}
-          <ColorSchemeSwitch />
-          <LanguageSwitch />
+          {community && (
+            <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" title={t('footer.sourceCodeTitle')}>
+              <GitHubIcon size={14} />
+              {t('footer.sourceCode')}
+            </a>
+          )}
         </nav>
       </div>
     </footer>
@@ -211,16 +162,17 @@ export function AppLayout() {
               </NavLink>
               {me?.isAdmin && (
                 <NavLink to="/admin">
-                  <SettingsIcon /> <span>{t('nav.admin')}</span>
+                  <ShieldIcon /> <span>{t('nav.admin')}</span>
                 </NavLink>
               )}
             </nav>
           )}
           {status === 'signedIn' && (
             <div className="user">
-              <span className="muted user-email" title={me?.email}>
-                {me?.email}
-              </span>
+              {/* Personal settings: appearance and language. The page also shows who is signed in. */}
+              <NavLink to="/settings" className="user-settings" title={t('nav.settings')} aria-label={t('nav.settings')}>
+                <SettingsIcon />
+              </NavLink>
               <Button size="sm" variant="ghost" onClick={() => void signOut()}>
                 {t('nav.signOut')}
               </Button>

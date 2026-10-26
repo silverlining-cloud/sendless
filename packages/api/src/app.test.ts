@@ -34,17 +34,34 @@ describe('app', () => {
   it('validates and stores settings', async () => {
     const h = createHarness();
     const current = (await h.call('GET', '/api/admin/settings', { as: 'admin' })).json.settings;
-    const css = await h.call('PUT', '/api/admin/settings', {
+    const bad = await h.call('PUT', '/api/admin/settings', {
       as: 'admin',
-      body: { ...current, branding: { ...current.branding, primaryColor: 'red;}body{display:none' } },
+      body: { ...current, branding: { ...current.branding, privacyUrl: 'javascript:alert(1)' } },
     });
-    expect(css.statusCode).toBe(400);
+    expect(bad.statusCode).toBe(400);
     const ok = await h.call('PUT', '/api/admin/settings', {
       as: 'admin',
       body: { ...current, branding: { ...current.branding, appName: 'Acme Files' } },
     });
     expect(ok.json.settings.branding.appName).toBe('Acme Files');
     expect((await h.call('GET', '/api/public/config')).json.branding.appName).toBe('Acme Files');
+  });
+
+  it('keeps logo, colors and texts for Pro', async () => {
+    const h = createHarness();
+    const pro = { logoUrl: 'https://acme.example/logo.png', primaryColor: '#FF0000', backgroundColor: '#FFFFFF', textColor: '#000000', welcomeTitle: 'Hi', welcomeText: null, footerText: 'Acme' };
+    const put = await h.call('PUT', '/api/admin/branding', { as: 'admin', body: pro });
+    expect(put.json.error.code).toBe('pro_required');
+
+    // The core settings route ignores them.
+    const current = (await h.call('GET', '/api/admin/settings', { as: 'admin' })).json.settings;
+    await h.call('PUT', '/api/admin/settings', { as: 'admin', body: { ...current, branding: { ...current.branding, ...pro } } });
+    expect((await h.call('GET', '/api/admin/settings', { as: 'admin' })).json.branding.primaryColor).toBe('#2F6FB5');
+
+    // Values stored earlier (e.g. under an expired license) don't apply without one.
+    await h.deps.updateSettings((s) => ({ ...s, branding: { ...s.branding, ...pro } }));
+    const config = (await h.call('GET', '/api/public/config')).json;
+    expect(config.branding).toMatchObject({ logoUrl: null, primaryColor: '#2F6FB5', welcomeTitle: null, footerText: null });
   });
 
   it('manages users but keeps at least one admin', async () => {

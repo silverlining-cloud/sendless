@@ -34,9 +34,9 @@ Sendless is one CloudFormation template. It creates everything it needs and remo
 ## After deployment
 
 1. Open the `AppUrl` output and sign in with the admin email and the temporary password from the invitation email.
-2. Under **Admin → Settings**, set your name, logo, colors and the privacy/imprint links.
+2. Under **Admin → Settings**, set your name and the privacy/imprint links.
 3. Invite users under **Admin → Users**.
-4. Pro: paste your license key under **Admin → License**, then configure SSO and policies.
+4. Pro: paste your license key under **Admin → License**, then set your logo, colors and texts under **Admin → Branding** and configure SSO and policies.
 
 ## Upgrading
 

@@ -25,6 +25,7 @@ import { badRequest, conflict, gone, HttpError, notFound, type HttpRequest } fro
 import type { ActorRecord, StoredFile, TransferRecord } from '../model.js';
 import type { Deps, Principal, UploadedPart } from '../ports.js';
 import { auditExpiry, RECIPIENT, recordEvent, requestSubject, toEventInfo, transferSubject, userActor } from './audit.js';
+import { effectiveBranding } from './config.js';
 import { checkFiles, checkLifetime, checkOpens, checkPassword, checkRecipients, effectiveLimits } from './limits.js';
 import { sendSafely, submissionReceivedMail, transferOpenedMail, transferSharedMail } from './notify.js';
 import { iso, orderedFiles, toFileInfo, toTransferSummary, transferUrl } from './views.js';
@@ -232,7 +233,7 @@ export async function finalizeUpload(deps: Deps, transferId: string, uploadToken
 
   const settings = await deps.settings();
   const { appUrl } = await deps.system();
-  const brand = settings.branding;
+  const brand = effectiveBranding(settings, editionFor(settings, deps.now()));
 
   if (ready.kind === 'outbound') {
     const url = transferUrl(appUrl, ready.id);
@@ -482,7 +483,7 @@ export async function unlockTransfer(deps: Deps, id: string, password: string | 
     const [settings, { appUrl }] = await Promise.all([deps.settings(), deps.system()]);
     await sendSafely(deps, {
       to: opened.ownerEmail,
-      ...transferOpenedMail(settings.branding, {
+      ...transferOpenedMail(effectiveBranding(settings, editionFor(settings, deps.now())), {
         title: opened.title,
         opens: opened.opens,
         maxOpens: opened.maxOpens,

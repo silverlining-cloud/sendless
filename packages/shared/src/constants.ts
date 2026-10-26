@@ -28,7 +28,7 @@ export const LOCKOUT_SECONDS = 15 * 60;
 /** Core minimum password length (Pro policies can raise it). */
 export const MIN_PASSWORD_LENGTH = 4;
 
-export const PRO_FEATURES = ['sso', 'malware-scanning', 'audit', 'policies'] as const;
+export const PRO_FEATURES = ['sso', 'malware-scanning', 'audit', 'policies', 'branding'] as const;
 export type ProFeature = (typeof PRO_FEATURES)[number];
 
 /** Product name; while an installation keeps it and has no logo of its own, the built-in logos are shown. */

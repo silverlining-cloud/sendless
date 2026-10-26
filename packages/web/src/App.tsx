@@ -12,10 +12,12 @@ const TransfersPage = lazy(() => import('./pages/TransfersPage.js').then((m) => 
 const TransferDetailPage = lazy(() => import('./pages/TransfersPage.js').then((m) => ({ default: m.TransferDetailPage })));
 const RequestsPage = lazy(() => import('./pages/RequestsPage.js').then((m) => ({ default: m.RequestsPage })));
 const RequestDetailPage = lazy(() => import('./pages/RequestsPage.js').then((m) => ({ default: m.RequestDetailPage })));
+const UserSettingsPage = lazy(() => import('./pages/UserSettingsPage.js').then((m) => ({ default: m.UserSettingsPage })));
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout.js').then((m) => ({ default: m.AdminLayout })));
 const SettingsPage = lazy(() => import('./pages/admin/SettingsPage.js').then((m) => ({ default: m.SettingsPage })));
 const UsersPage = lazy(() => import('./pages/admin/UsersPage.js').then((m) => ({ default: m.UsersPage })));
 const LicensePage = lazy(() => import('./pages/admin/LicensePage.js').then((m) => ({ default: m.LicensePage })));
+const BrandingPage = lazy(() => import('@sendless/ee/web').then((m) => ({ default: m.BrandingPage })));
 const AuditPage = lazy(() => import('@sendless/ee/web').then((m) => ({ default: m.AuditPage })));
 const PoliciesPage = lazy(() => import('@sendless/ee/web').then((m) => ({ default: m.PoliciesPage })));
 const SsoPage = lazy(() => import('@sendless/ee/web').then((m) => ({ default: m.SsoPage })));
@@ -38,11 +40,13 @@ export function App() {
           <Route path="transfers/:id" element={page(<TransferDetailPage />)} />
           <Route path="requests" element={page(<RequestsPage />)} />
           <Route path="requests/:id" element={page(<RequestDetailPage />)} />
+          <Route path="settings" element={page(<UserSettingsPage />)} />
           <Route path="admin" element={page(<AdminLayout />)}>
             <Route index element={<Navigate to="settings" replace />} />
             <Route path="settings" element={page(<SettingsPage />)} />
             <Route path="users" element={page(<UsersPage />)} />
             <Route path="license" element={page(<LicensePage />)} />
+            <Route path="branding" element={page(<BrandingPage />)} />
             <Route path="audit" element={page(<AuditPage />)} />
             <Route path="policies" element={page(<PoliciesPage />)} />
             <Route path="sso" element={page(<SsoPage />)} />

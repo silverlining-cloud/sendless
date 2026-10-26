@@ -1,4 +1,4 @@
-import { policiesSchema, ssoProviderInput, type EventInfo } from '@sendless/shared';
+import { policiesSchema, proBrandingSchema, ssoProviderInput, type EventInfo } from '@sendless/shared';
 import { ADMIN_SUBJECT, recordEvent, toEventInfo, userActor } from '@sendless/api/audit';
 import { badRequest, json, noContent, parseBody, type HttpResponse } from '@sendless/api/http';
 import type { ProRouteContext } from '@sendless/api/ports';
@@ -104,6 +104,16 @@ export function registerProRoutes(r: Router, ctx: ProRouteContext): void {
     await deps.updateSettings((current) => ({ ...current, policies }));
     await recordEvent(deps, { subject: ADMIN_SUBJECT, action: 'policies.updated', actor: userActor(principal), req });
     return json(200, policies);
+  });
+
+  // ----- branding: logo, colors and texts (name and legal links are in the core settings) -----
+  r.put('/api/admin/branding', async (req) => {
+    const principal = await ctx.requireAdmin(req);
+    await ctx.requireFeature('branding');
+    const input = parseBody(req, proBrandingSchema);
+    await deps.updateSettings((current) => ({ ...current, branding: { ...current.branding, ...input } }));
+    await recordEvent(deps, { subject: ADMIN_SUBJECT, action: 'branding.updated', actor: userActor(principal), req });
+    return json(200, input);
   });
 
   // ----- SSO -----

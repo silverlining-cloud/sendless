@@ -1,5 +1,5 @@
 import type { ProFeature } from './constants.js';
-import type { Branding, Policies, SettingsInput } from './schemas.js';
+import type { Branding, Policies, ProBranding, SettingsInput } from './schemas.js';
 
 export type Edition = 'community' | 'pro';
 export type TransferKind = 'outbound' | 'inbound';
@@ -229,6 +229,8 @@ export interface SystemInfo {
 
 export interface AdminSettings {
   settings: SettingsInput;
+  /** Stored even without a license; it only takes effect with the `branding` feature. */
+  branding: ProBranding;
   policies: Policies;
   license: LicenseInfo | null;
   licenseError: string | null;

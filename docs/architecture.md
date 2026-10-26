@@ -54,6 +54,8 @@ flowchart LR
 | 16 | Frontend | **React + Vite + TypeScript SPA**, no UI framework. CSS variables are themed from the admin branding settings. **English and German, light and dark theme.** | Small bundle, and branding can be changed at runtime. | — |
 | 17 | Local development | The API is split into core logic and swappable adapters for AWS services. `npm run dev` runs the real API with an in-memory database, a local file store and fake login. | Contributors can run the whole app without AWS, and the UI can be tested end to end. | Requires an AWS account to try |
 | 18 | Runtime | **Node.js 22, arm64**, bundled with esbuild, AWS SDK v3 bundled | About 20 % cheaper on arm64, and the bundle is reproducible. | — |
+| 19 | Branding | **Logo, colors, welcome and footer texts are Pro** (license feature `branding`). Branded emails and a branded Cognito sign-in page will be part of the same feature. The name and the privacy/imprint links stay in Community. Without the feature, the API serves the defaults for the Pro fields, but keeps the stored values. | White-labelling is something companies pay for. Legal links must work in every edition. An expired license doesn't lose anyone's settings. | Branding in Community |
+| 20 | Personal settings | **Theme and language are personal settings** on `/settings`, saved per browser. Recipients get the browser's language and the system's theme. | They are preferences of the person, not of the installation, and the footer stays clean. | Switches in the footer |
 
 ## Repository layout
 
@@ -100,6 +102,7 @@ The API is served from the same origin under `/api`. Authenticated calls send th
 **Pro (`ee/`):**
 - `GET /api/admin/audit` (with export)
 - `GET|PUT /api/admin/policies`
+- `PUT /api/admin/branding` (logo, colors, texts; read through `GET /api/admin/settings`)
 - `GET|POST|DELETE /api/admin/sso/providers`
 - the malware scan-result handler
 

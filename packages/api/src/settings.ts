@@ -1,7 +1,9 @@
-import { DEFAULT_APP_NAME, GiB, type Policies, type SettingsInput } from '@sendless/shared';
+import { DEFAULT_APP_NAME, GiB, type Branding, type Policies, type SettingsInput } from '@sendless/shared';
 import type { SsoProviderRecord } from './model.js';
 
-export interface Settings extends SettingsInput {
+export interface Settings extends Omit<SettingsInput, 'branding'> {
+  /** Name and legal links, plus logo, colors and texts, which apply only with a license that includes `branding`. */
+  branding: Branding;
   licenseKey: string | null;
   /** Pro: enforced only with a license that includes `policies`. */
   policies: Policies;

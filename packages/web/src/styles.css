@@ -153,6 +153,9 @@ main.narrow {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
+.form-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .narrow-center {
   max-width: 620px;
   margin: 32px auto 0;
@@ -204,7 +207,7 @@ img.logo-for-dark,
   width: 100%;
   max-width: 320px;
   height: auto;
-  margin-bottom: 8px;
+  margin: 0 auto 8px;
 }
 /* Admins' own logos are made for a light header; give them a light backing in the dark theme. */
 [data-theme='dark'] .brand img:not(.builtin-logo) {
@@ -261,11 +264,20 @@ img.logo-for-dark,
   gap: 8px;
   margin-left: auto;
 }
-.user-email {
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.user-settings {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+}
+.user-settings:hover {
+  background: var(--inset);
+  color: var(--text);
+}
+.user-settings.active {
+  background: var(--brand-soft);
+  color: var(--brand-text);
 }
 .subnav {
   display: flex;
@@ -299,22 +311,22 @@ img.logo-for-dark,
   min-height: 52px;
   flex-wrap: wrap;
 }
-.footer nav,
-.footer-text {
+.footer nav {
   display: flex;
   gap: 16px;
   align-items: center;
   flex-wrap: wrap;
+  margin-left: auto;
 }
-.footer a {
-  color: var(--muted);
-}
-.edition a {
+/* Links with and without an icon share one line height, so their text lines up. */
+.footer nav a {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  line-height: 20px;
+  color: var(--muted);
 }
-/* Small button groups in the footer: language and light/dark theme. */
+/* Button groups for choices like light/dark theme and language (personal settings). */
 .segmented {
   display: inline-flex;
   border: 1px solid var(--border-strong);
@@ -343,6 +355,16 @@ img.logo-for-dark,
 .segmented button.active {
   background: var(--brand);
   color: var(--brand-contrast);
+}
+.segmented-lg {
+  align-self: flex-start;
+  max-width: 100%;
+}
+.segmented-lg button {
+  gap: 6px;
+  padding: 8px 14px;
+  min-height: 40px;
+  font-size: 0.9rem;
 }
 
 .page-header {
@@ -459,7 +481,8 @@ img.logo-for-dark,
   gap: 6px;
   min-width: 0;
 }
-.field label {
+.field label,
+.field-label {
   font-weight: 550;
   font-size: 0.9rem;
   display: flex;
@@ -989,8 +1012,14 @@ a.list-main:hover .list-title {
 }
 
 /* ---------- small screens ---------- */
-@media (max-width: 1100px) {
-  .user-email {
+/* The navigation shows icons only once its labels no longer fit next to the logo; German labels are longer. */
+@media (max-width: 1140px) {
+  :lang(de) .nav span {
+    display: none;
+  }
+}
+@media (max-width: 1000px) {
+  .nav span {
     display: none;
   }
 }
@@ -999,16 +1028,21 @@ a.list-main:hover .list-title {
   .detail-grid {
     grid-template-columns: 1fr;
   }
-  .nav span {
-    display: none;
-  }
   .topbar-inner {
     gap: 10px;
   }
 }
 @media (max-width: 560px) {
+  .nav a {
+    padding: 8px;
+  }
+  .nav,
+  .user {
+    gap: 2px;
+  }
   .row-2,
   .form-grid,
+  .form-grid-3,
   .invite-form {
     grid-template-columns: 1fr;
   }

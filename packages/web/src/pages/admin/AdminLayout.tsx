@@ -9,6 +9,7 @@ const SECTIONS: { path: string; label: MessageKey; pro?: boolean }[] = [
   { path: 'settings', label: 'admin.settings' },
   { path: 'users', label: 'admin.users' },
   { path: 'license', label: 'admin.license' },
+  { path: 'branding', label: 'admin.branding', pro: true },
   { path: 'audit', label: 'admin.audit', pro: true },
   { path: 'policies', label: 'admin.policies', pro: true },
   { path: 'sso', label: 'admin.sso', pro: true },

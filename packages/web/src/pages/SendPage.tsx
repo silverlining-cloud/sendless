@@ -163,7 +163,7 @@ export function SendPage() {
             </Field>
           </div>
           {limits.allowUnlimitedOpens && limits.maxOpensLimit === null && (
-            <Checkbox label={t('common.unlimited')} checked={unlimited} onChange={(e) => setUnlimited(e.target.checked)} />
+            <Checkbox label={t('send.unlimitedDownloads')} checked={unlimited} onChange={(e) => setUnlimited(e.target.checked)} />
           )}
           {!limits.requirePassword && (
             <Checkbox label={t('send.protect')} checked={usePassword} onChange={(e) => setUsePassword(e.target.checked)} />
