@@ -48,4 +48,8 @@ export const ArrowLeftIcon = make(['M19 12H5', 'M11 6l-6 6 6 6'], 'ArrowLeftIcon
 export const SunIcon = make(['M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z', 'M12 2v2', 'M12 20v2', 'M4.93 4.93l1.41 1.41', 'M17.66 17.66l1.41 1.41', 'M2 12h2', 'M20 12h2', 'M4.93 19.07l1.41-1.41', 'M17.66 6.34l1.41-1.41'], 'SunIcon');
 export const MoonIcon = make(['M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'], 'MoonIcon');
 export const MonitorIcon = make(['M3 4h18v12H3z', 'M8 20h8', 'M12 16v4'], 'MonitorIcon');
+export const GitHubIcon = make(
+  ['M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21'],
+  'GitHubIcon',
+);
 export const GlobeIcon = make(['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M3 12h18', 'M12 3a14 14 0 0 1 0 18', 'M12 3a14 14 0 0 0 0 18'], 'GlobeIcon');

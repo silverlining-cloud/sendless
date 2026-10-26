@@ -30,3 +30,9 @@ export const MIN_PASSWORD_LENGTH = 4;
 
 export const PRO_FEATURES = ['sso', 'malware-scanning', 'audit', 'policies'] as const;
 export type ProFeature = (typeof PRO_FEATURES)[number];
+
+/** Product name; while an installation keeps it and has no logo of its own, the built-in logos are shown. */
+export const DEFAULT_APP_NAME = 'Sendless';
+
+/** Public home of the open-source code, linked from the Community Edition footer. */
+export const SOURCE_URL = 'https://github.com/silverlining-cloud/sendless';

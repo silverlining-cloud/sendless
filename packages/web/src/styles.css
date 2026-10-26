@@ -181,8 +181,33 @@ main.narrow {
   max-height: 40px;
   max-width: 200px;
 }
-/* Logos are made for the light header; give them a light backing in the dark theme. */
-[data-theme='dark'] .brand img {
+/* Built-in Sendless logos: dark gray for the light theme, a light copy for the dark theme. */
+.brand img.builtin-logo {
+  height: 32px;
+  max-width: none;
+}
+.brand img.brand-icon {
+  display: none;
+  height: 36px;
+}
+img.logo-for-light {
+  display: block;
+}
+img.logo-for-dark,
+[data-theme='dark'] img.logo-for-light {
+  display: none;
+}
+[data-theme='dark'] img.logo-for-dark {
+  display: block;
+}
+.signin-logo img {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  margin-bottom: 8px;
+}
+/* Admins' own logos are made for a light header; give them a light backing in the dark theme. */
+[data-theme='dark'] .brand img:not(.builtin-logo) {
   background: #ffffff;
   border-radius: var(--radius-sm);
   padding: 4px 8px;
@@ -274,13 +299,20 @@ main.narrow {
   min-height: 52px;
   flex-wrap: wrap;
 }
-.footer nav {
+.footer nav,
+.footer-text {
   display: flex;
   gap: 16px;
   align-items: center;
+  flex-wrap: wrap;
 }
 .footer a {
   color: var(--muted);
+}
+.edition a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 /* Small button groups in the footer: language and light/dark theme. */
 .segmented {
@@ -444,6 +476,17 @@ main.narrow {
   padding: 9px 11px;
   transition: border-color 0.15s;
 }
+/* One height for every single-line control: selects otherwise use the browser's line height
+   and end up shorter than the text and number inputs next to them. */
+input.input,
+select.input {
+  height: 42px;
+  line-height: 22px;
+}
+select.input {
+  padding-top: 0;
+  padding-bottom: 0;
+}
 .input:hover {
   border-color: var(--text);
 }
@@ -545,6 +588,8 @@ textarea.input {
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   padding: 9px 16px;
+  /* Same 42 px as inputs and selects, so buttons line up with the fields next to them. */
+  line-height: 22px;
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
@@ -982,5 +1027,12 @@ a.list-main:hover .list-title {
   }
   .public-card {
     padding: 20px;
+  }
+  /* Only next to the navigation; pages without it keep the wordmark. */
+  .topbar-inner:has(.nav) .brand-wordmark {
+    display: none;
+  }
+  .topbar-inner:has(.nav) .brand img.brand-icon {
+    display: block;
   }
 }

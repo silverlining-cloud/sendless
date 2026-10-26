@@ -1,4 +1,4 @@
-import { GiB, type Policies, type SettingsInput } from '@sendless/shared';
+import { DEFAULT_APP_NAME, GiB, type Policies, type SettingsInput } from '@sendless/shared';
 import type { SsoProviderRecord } from './model.js';
 
 export interface Settings extends SettingsInput {
@@ -23,7 +23,7 @@ export const DEFAULT_POLICIES: Policies = {
 
 export const DEFAULT_SETTINGS: Settings = {
   branding: {
-    appName: 'Sendless',
+    appName: DEFAULT_APP_NAME,
     logoUrl: null,
     primaryColor: '#2F6FB5',
     backgroundColor: '#E9EDF2',

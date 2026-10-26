@@ -1,18 +1,50 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
+import { DEFAULT_APP_NAME, SOURCE_URL } from '@sendless/shared';
 import { useAuth } from '../auth/AuthProvider.js';
 import { setColorScheme, storedColorScheme, type ColorScheme } from '../color-scheme.js';
 import { useConfig } from '../config.js';
 import { useI18n, type MessageKey } from '../i18n/index.js';
-import { InboxIcon, ListIcon, MonitorIcon, MoonIcon, SendIcon, SettingsIcon, SunIcon } from './icons.js';
+import { GitHubIcon, InboxIcon, ListIcon, MonitorIcon, MoonIcon, SendIcon, SettingsIcon, SunIcon } from './icons.js';
 import { Button, Card, Field, Input, Loading } from './ui.js';
+
+/** The built-in logos belong to Sendless; a renamed installation without its own logo shows its name instead. */
+function useBuiltInLogo(): boolean {
+  const { branding } = useConfig();
+  return !branding.logoUrl && branding.appName === DEFAULT_APP_NAME;
+}
+
+/** Dark-gray logo for the light theme, light-gray copy for the dark theme (switched in CSS). */
+function BuiltInLogo({ name, className, alt }: { name: 'sendless-wordmark' | 'sendless-tagline'; className: string; alt: string }) {
+  return (
+    <>
+      <img src={`/brand/${name}.png`} alt={alt} className={`${className} logo-for-light`} />
+      <img src={`/brand/${name}-light.png`} alt={alt} className={`${className} logo-for-dark`} />
+    </>
+  );
+}
 
 function Brand() {
   const { branding } = useConfig();
+  const builtIn = useBuiltInLogo();
   return (
     <a href="/" className="brand">
-      {branding.logoUrl ? <img src={branding.logoUrl} alt={branding.appName} /> : <span className="brand-mark" aria-hidden="true" />}
-      {!branding.logoUrl && <span className="brand-name">{branding.appName}</span>}
+      {builtIn ? (
+        <>
+          <span className="brand-wordmark">
+            <BuiltInLogo name="sendless-wordmark" className="builtin-logo" alt={branding.appName} />
+          </span>
+          {/* Small screens: the round icon instead of the wordmark, so the navigation still fits. */}
+          <img src="/brand/sendless-icon.png" alt={branding.appName} className="builtin-logo brand-icon" />
+        </>
+      ) : branding.logoUrl ? (
+        <img src={branding.logoUrl} alt={branding.appName} />
+      ) : (
+        <>
+          <span className="brand-mark" aria-hidden="true" />
+          <span className="brand-name">{branding.appName}</span>
+        </>
+      )}
     </a>
   );
 }
@@ -62,12 +94,23 @@ function ColorSchemeSwitch() {
 }
 
 function Footer() {
-  const { branding } = useConfig();
+  const { branding, edition } = useConfig();
   const { t } = useI18n();
   return (
     <footer className="footer">
       <div className="container footer-inner">
-        <span>{branding.footerText}</span>
+        <div className="footer-text">
+          {branding.footerText && <span>{branding.footerText}</span>}
+          {edition === 'community' && (
+            <span className="edition">
+              {t('footer.communityEdition')}
+              <span aria-hidden="true"> · </span>
+              <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" title={t('footer.sourceCodeTitle')}>
+                <GitHubIcon size={14} /> {t('footer.sourceCode')}
+              </a>
+            </span>
+          )}
+        </div>
         <nav>
           {branding.privacyUrl && (
             <a href={branding.privacyUrl} target="_blank" rel="noopener noreferrer">
@@ -109,9 +152,15 @@ function SignIn() {
   const location = useLocation();
   const [email, setEmail] = useState('admin@example.com');
   const [busy, setBusy] = useState(false);
+  const builtIn = useBuiltInLogo();
   return (
     <div className="signin">
       <Card>
+        {builtIn && (
+          <div className="signin-logo">
+            <BuiltInLogo name="sendless-tagline" className="builtin-logo" alt="sendless.cloud — secure file transfer in your own cloud" />
+          </div>
+        )}
         <h1>{branding.welcomeTitle || t('auth.title')}</h1>
         <p className="muted">{branding.welcomeText || t('auth.text')}</p>
         {auth.mode === 'dev' ? (
