@@ -1,6 +1,6 @@
 {
   "name": "sendless",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "private": true,
   "description": "Serverless, self-hosted file transfer for AWS. Expiring links, password protection, file requests. Runs entirely in your own AWS account.",
   "license": "Apache-2.0",
