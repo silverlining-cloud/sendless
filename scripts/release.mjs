@@ -1,9 +1,10 @@
 // Builds a release: dist/release/{backend.zip, web.zip, sendless.yaml, SHA256SUMS}.
 //
-//   npm run release -- --base-url https://my-bucket.s3.amazonaws.com/sendless/v1.0.0
+//   npm run release -- --base-url https://my-bucket.s3.amazonaws.com/sendless
 //
-// The template pins the version and the SHA-256 of both zips; the zips are byte-for-byte
-// reproducible, so anyone can rebuild a release and compare the checksums.
+// --base-url is the folder that holds one v<version>/ folder per release; this release goes to
+// <base-url>/v<version>/. The template pins the version and the SHA-256 of both zips; the zips are
+// byte-for-byte reproducible, so anyone can rebuild a release and compare the checksums.
 import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -18,8 +19,11 @@ const { values } = parseArgs({
   },
 });
 const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
-const baseUrl = (values['base-url'] ?? `https://REPLACE-WITH-YOUR-BUCKET.s3.amazonaws.com/sendless/v${version}`).replace(/\/$/, '');
+const baseUrl = (values['base-url'] ?? 'https://REPLACE-WITH-YOUR-BUCKET.s3.amazonaws.com/sendless').replace(/\/$/, '');
 if (!baseUrl.startsWith('https://')) throw new Error('--base-url must start with https://');
+if (/\/v\d+\.\d+\.\d+[^/]*$/.test(baseUrl)) {
+  throw new Error(`--base-url is the folder above the version folders; drop the trailing /v… (got ${baseUrl})`);
+}
 
 if (!values['skip-build']) execSync('npm run build', { stdio: 'inherit' });
 
@@ -65,5 +69,5 @@ writeFileSync(
 console.log(`\nSendless ${version}`);
 console.log(`  backend.zip  ${(backend.length / 1024).toFixed(0)} KiB  ${checksums.backend}`);
 console.log(`  web.zip      ${(web.length / 1024).toFixed(0)} KiB  ${checksums.web}`);
-console.log(`  artifacts expected at ${baseUrl}/`);
-console.log('\nUpload with: scripts/publish.sh <bucket> <prefix>');
+console.log(`  artifacts expected at ${baseUrl}/v${version}/`);
+console.log('\nUpload with: scripts/publish.sh <bucket> [<prefix>]');

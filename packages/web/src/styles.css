@@ -356,6 +356,24 @@ img.logo-for-dark,
   background: var(--brand);
   color: var(--brand-contrast);
 }
+/* Two-factor setup: QR code next to the key and code field. */
+.two-factor-setup {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.qr {
+  width: 184px;
+  height: 184px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.code-input {
+  max-width: 160px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.2em;
+}
 .segmented-lg {
   align-self: flex-start;
   max-width: 100%;
@@ -1039,6 +1057,9 @@ a.list-main:hover .list-title {
   .nav,
   .user {
     gap: 2px;
+  }
+  .two-factor-setup {
+    grid-template-columns: 1fr;
   }
   .row-2,
   .form-grid,

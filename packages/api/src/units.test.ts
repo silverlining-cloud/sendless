@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { principalFromClaims } from './adapters/cognito.js';
 import { hashPassword, verifyPassword } from './crypto.js';
 import { contentDisposition, planParts, safeContentType, sanitizeFileName } from './files.js';
 import { fromFunctionUrlEvent } from './http.js';
@@ -81,5 +82,23 @@ describe('function URL events', () => {
       requestContext: { http: { method: 'GET' } },
     });
     expect(viaForwarded.ip).toBe('198.51.100.1');
+  });
+});
+
+describe('Cognito claims', () => {
+  const base = { sub: 'sub-1', 'cognito:username': 'user-1', email: 'Ann@Example.com', 'cognito:groups': ['admins'] };
+
+  it('accepts verified email addresses', () => {
+    expect(principalFromClaims({ ...base, email_verified: true })).toEqual({ sub: 'sub-1', username: 'user-1', email: 'ann@example.com', isAdmin: true });
+  });
+
+  it('refuses an email address the user changed but did not verify', () => {
+    expect(principalFromClaims({ ...base, email_verified: false })).toBeNull();
+    expect(principalFromClaims({ ...base })).toBeNull();
+  });
+
+  it('trusts the company identity provider for SSO users', () => {
+    const sso = { ...base, 'cognito:groups': undefined, email_verified: false, identities: [{ providerName: 'Entra', providerType: 'SAML' }] };
+    expect(principalFromClaims(sso)).toMatchObject({ email: 'ann@example.com', isAdmin: false });
   });
 });

@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { useAuth } from '../auth/AuthProvider.js';
 import { setColorScheme, storedColorScheme, type ColorScheme } from '../color-scheme.js';
 import { MonitorIcon, MoonIcon, SunIcon } from '../components/icons.js';
+import { TwoFactorCard } from '../components/two-factor.js';
 import { Card, PageHeader } from '../components/ui.js';
 import { useI18n, type Locale, type MessageKey } from '../i18n/index.js';
 
@@ -35,7 +36,7 @@ function Choice<T extends string>({ label, value, options, onChange }: { label: 
   );
 }
 
-/** Personal settings for every signed-in user. They are kept per browser, like before in the footer. */
+/** Personal settings for every signed-in user: appearance and language (kept per browser) and two-factor authentication. */
 export function UserSettingsPage() {
   const { t, locale, setLocale } = useI18n();
   const { me } = useAuth();
@@ -63,6 +64,7 @@ export function UserSettingsPage() {
         <Choice label={t('settings.language')} value={locale} options={LANGUAGES} onChange={setLocale} />
         <p className="hint">{t('settings.savedInBrowser')}</p>
       </Card>
+      <TwoFactorCard />
     </div>
   );
 }

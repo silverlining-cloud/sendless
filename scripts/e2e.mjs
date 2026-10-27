@@ -6,7 +6,7 @@
 // unless --keep), signs in with Cognito SRP, and exercises the API, S3 uploads/downloads, malware
 // scanning (if enabled), file requests, the sweeper and admin endpoints. With --keep it leaves one
 // password-protected transfer and one file request for manual or browser testing.
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { parseArgs } from 'node:util';
 import { CloudFormationClient, DescribeStackResourcesCommand, DescribeStacksCommand } from '@aws-sdk/client-cloudformation';
 import {
@@ -14,7 +14,11 @@ import {
   AdminCreateUserCommand,
   AdminDeleteUserCommand,
   AdminSetUserPasswordCommand,
+  AssociateSoftwareTokenCommand,
   CognitoIdentityProviderClient,
+  DescribeUserPoolClientCommand,
+  SetUserMFAPreferenceCommand,
+  VerifySoftwareTokenCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { GetFunctionUrlConfigCommand, InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
@@ -126,15 +130,35 @@ async function createUser(address, pass, admin) {
   if (admin) await idp.send(new AdminAddUserToGroupCommand({ UserPoolId: physical.UserPool, Username: address, GroupName: 'admins' }));
 }
 
-function signIn(address = email, pass = password) {
+/** SRP sign-in; `totp` answers the authenticator-app challenge when two-factor authentication is on. */
+function srpSession(address, pass, totp) {
   const pool = new cognito.CognitoUserPool({ UserPoolId: physical.UserPool, ClientId: physical.UserPoolClient });
   const user = new cognito.CognitoUser({ Username: address, Pool: pool });
-  return new Promise((resolve, reject) =>
-    user.authenticateUser(new cognito.AuthenticationDetails({ Username: address, Password: pass }), {
-      onSuccess: (session) => resolve(session.getIdToken().getJwtToken()),
+  return new Promise((resolve, reject) => {
+    const callbacks = {
+      onSuccess: resolve,
       onFailure: reject,
-    }),
-  );
+      totpRequired: () => (totp ? user.sendMFACode(totp(), callbacks, 'SOFTWARE_TOKEN_MFA') : reject(new Error('unexpected code prompt'))),
+    };
+    user.authenticateUser(new cognito.AuthenticationDetails({ Username: address, Password: pass }), callbacks);
+  });
+}
+
+async function signIn(address = email, pass = password) {
+  return (await srpSession(address, pass)).getIdToken().getJwtToken();
+}
+
+/** RFC 6238 code from a base32 key, as an authenticator app computes it. */
+function totpCode(secret, at = Date.now()) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = '';
+  for (const char of secret.replace(/=+$/, '')) bits += alphabet.indexOf(char).toString(2).padStart(5, '0');
+  const key = Buffer.from(bits.match(/.{8}/g).map((b) => parseInt(b, 2)));
+  const counter = Buffer.alloc(8);
+  counter.writeUInt32BE(Math.floor(at / 30_000), 4);
+  const mac = createHmac('sha1', key).update(counter).digest();
+  const offset = mac[19] & 0x0f;
+  return String((mac.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, '0');
 }
 
 const email = `e2e-${randomBytes(4).toString('hex')}@example.com`;
@@ -188,6 +212,38 @@ try {
     assert(me.status === 200 && me.json.isAdmin && me.json.email === email, JSON.stringify(me.json));
     return email;
   });
+
+  const mfaEmail = `e2e-mfa-${randomBytes(4).toString('hex')}@example.com`;
+  await check('two-factor authentication with an authenticator app', async () => {
+    const client = await idp.send(new DescribeUserPoolClientCommand({ UserPoolId: physical.UserPool, ClientId: physical.UserPoolClient }));
+    const scopes = client.UserPoolClient.AllowedOAuthScopes ?? [];
+    assert(scopes.includes('aws.cognito.signin.user.admin'), `the web app cannot request the self-service scope: ${scopes}`);
+
+    // What Settings → Two-factor authentication does, with the user's own access token.
+    const mfaPassword = newPassword();
+    await createUser(mfaEmail, mfaPassword, false);
+    const AccessToken = (await srpSession(mfaEmail, mfaPassword)).getAccessToken().getJwtToken();
+    const { SecretCode } = await idp.send(new AssociateSoftwareTokenCommand({ AccessToken }));
+    const verified = await idp.send(new VerifySoftwareTokenCommand({ AccessToken, UserCode: totpCode(SecretCode), FriendlyDeviceName: 'Sendless' }));
+    assert(verified.Status === 'SUCCESS', `verify: ${verified.Status}`);
+    await idp.send(new SetUserMFAPreferenceCommand({ AccessToken, SoftwareTokenMfaSettings: { Enabled: true, PreferredMfa: true } }));
+
+    // A code can be used once; sign in again in the next 30-second window.
+    await sleep(30_000 - (Date.now() % 30_000) + 1000);
+    let prompted = false;
+    const session = await srpSession(mfaEmail, mfaPassword, () => {
+      prompted = true;
+      return totpCode(SecretCode);
+    });
+    assert(prompted, 'sign-in did not ask for a code');
+    const saved = token;
+    token = session.getIdToken().getJwtToken();
+    const me = await call('GET', '/api/me');
+    token = saved;
+    assert(me.status === 200 && me.json.email === mfaEmail, JSON.stringify(me.json));
+    return 'code required at sign-in';
+  });
+  await idp.send(new AdminDeleteUserCommand({ UserPoolId: physical.UserPool, Username: mfaEmail })).catch(() => {});
 
   console.log('\nTransfers');
   const big = randomBytes(20 * 1024 * 1024 + 12345);

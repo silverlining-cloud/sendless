@@ -19,7 +19,7 @@ Sendless is one CloudFormation template. It creates everything it needs and remo
 | `EnableMalwareScanning` | false | Pro. Creates a GuardDuty Malware Protection plan for the files bucket. GuardDuty bills per GB scanned. |
 | `CloudFrontPriceClass` | PriceClass_100 | Edge locations used: North America and Europe by default. |
 | `LogRetentionDays` | 30 | CloudWatch Logs retention for all functions. |
-| `ArtifactBaseUrl` | release URL | Where `backend.zip` and `web.zip` are downloaded from. The template pins their SHA-256, so a mirror (e.g. your own bucket) must serve identical files. |
+| `ArtifactBaseUrl` | release location | The folder that holds the releases, one `v<version>/` folder each; `backend.zip` and `web.zip` are downloaded from the folder of the template's version. It stays the same across updates. The template pins the SHA-256 of both files, so a mirror (e.g. your own bucket) must serve identical files in the same layout. |
 
 ## What gets created
 
@@ -40,7 +40,9 @@ Sendless is one CloudFormation template. It creates everything it needs and remo
 
 ## Upgrading
 
-Update the stack with the template of the new version. The bootstrap function fetches the new artifacts, verifies their checksums and the functions switch over. The setup function republishes the web app and re-applies SSO providers to the app client.
+Update the stack with the template of the new version and keep the parameters as they are. The bootstrap function fetches the new artifacts from the version's folder under `ArtifactBaseUrl`, verifies their checksums and the functions switch over. The setup function republishes the web app and re-applies SSO providers to the app client.
+
+Stacks installed with 1.5.0 or earlier saved a version folder in `ArtifactBaseUrl` (e.g. `…/v1.5.0`). From 1.6.0 on, the bootstrap function drops such a trailing version folder, so these stacks update without changing the parameter.
 
 ## Uninstalling
 
@@ -50,11 +52,11 @@ Delete the stack. The setup function empties the web and files buckets and the b
 
 ```bash
 npm ci
-npm run release -- --base-url https://<bucket>.s3.amazonaws.com/sendless/v1.0.0
-scripts/publish.sh <bucket> sendless/v1.0.0     # requires AWS credentials
+npm run release -- --base-url https://<bucket>.s3.amazonaws.com/sendless
+scripts/publish.sh <bucket> sendless     # requires AWS credentials; uploads to sendless/v<version>/
 ```
 
-The bucket must allow anonymous `s3:GetObject` on that prefix: CloudFormation reads the template from it, and the bootstrap function downloads the zips from it. `publish.sh` prints the quick-create link:
+`--base-url` is the folder above the version folders, so every release of a mirror uses the same value. The bucket must allow anonymous `s3:GetObject` on that prefix: CloudFormation reads the template from it, and the bootstrap function downloads the zips from it. `publish.sh` prints the quick-create link:
 
 ```
 https://console.aws.amazon.com/cloudformation/home#/stacks/quickcreate?templateURL=<url-encoded template URL>&stackName=sendless

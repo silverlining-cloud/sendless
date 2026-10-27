@@ -20,7 +20,7 @@ No servers to run, nothing leaves your account, and one click to deploy.
 | Email the link and get notified on download (Amazon SES) | ✓ | ✓ |
 | Activity log per transfer (who opened, which file, IP, country) | ✓ | ✓ |
 | Privacy and imprint links | ✓ | ✓ |
-| User management, invitations, optional self sign-up by email domain, MFA | ✓ | ✓ |
+| User management, invitations, optional self sign-up by email domain, two-factor authentication with an authenticator app | ✓ | ✓ |
 | Guaranteed deletion: sweeper plus an S3 lifecycle hard limit | ✓ | ✓ |
 | English and German UI, light and dark theme | ✓ | ✓ |
 | **Single sign-on** (SAML / OIDC: Entra ID, Okta, Google, …) | | ✓ |
@@ -61,7 +61,7 @@ npm run dev        # http://localhost:5173 — runs the real API with in-memory 
 npm run dev:pro    # same, with Pro features unlocked by a throwaway development license
 npm test           # unit, service and store contract tests
 npm run typecheck
-npm run release -- --base-url https://<bucket>.s3.amazonaws.com/sendless/v1.0.0
+npm run release -- --base-url https://<bucket>.s3.amazonaws.com/sendless
 ```
 
 Sign in locally as `admin@example.com` or `user@example.com` (no password in dev mode). See [docs/development.md](docs/development.md).

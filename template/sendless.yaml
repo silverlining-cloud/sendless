@@ -86,8 +86,9 @@ Parameters:
   ArtifactBaseUrl:
     Type: String
     Description: >-
-      HTTPS location of backend.zip and web.zip for this version. The files are verified against SHA-256
-      checksums pinned in this template, so a mirror must serve identical files.
+      HTTPS location of the Sendless releases: the folder that holds one v<version>/ folder per release, so the
+      same value works for every update. The files are verified against SHA-256 checksums pinned in this template,
+      so a mirror must serve identical files.
     Default: https://__ARTIFACT_BASE_URL__
     AllowedPattern: '^https://.+'
 
@@ -201,7 +202,7 @@ Resources:
       LoggingConfig: { LogGroup: !Ref BootstrapLogGroup }
       Code:
         ZipFile: |
-          import hashlib, json, urllib.request, boto3
+          import hashlib, json, re, urllib.request, boto3
           s3 = boto3.client('s3')
           # cfnresponse is not provided for every runtime, so answer CloudFormation directly.
           def respond(event, ok, physical, reason=''):
@@ -221,7 +222,8 @@ Resources:
                           if keys:
                               s3.delete_objects(Bucket=bucket, Delete={'Objects': keys, 'Quiet': True})
                   else:
-                      base = props['BaseUrl'].rstrip('/')
+                      # Up to 1.5.0 the value named one release folder; the console keeps it on updates.
+                      base = re.sub(r'/v\d+\.\d+\.\d+[^/]*$', '', props['BaseUrl'].rstrip('/'))
                       if not base.startswith('https://'):
                           raise ValueError('ArtifactBaseUrl must start with https://')
                       for a in props['Artifacts']:
@@ -247,11 +249,12 @@ Resources:
       ServiceTimeout: 600
       Bucket: !Ref ArtifactsBucket
       BaseUrl: !Ref ArtifactBaseUrl
+      # Name is the path below ArtifactBaseUrl, Key the copy in the stack's own bucket.
       Artifacts:
-        - Name: backend.zip
+        - Name: !Sub ['v${Version}/backend.zip', { Version: !FindInMap [Release, Current, Version] }]
           Key: !Sub ['v${Version}/backend.zip', { Version: !FindInMap [Release, Current, Version] }]
           Sha256: !FindInMap [Release, Current, BackendSha256]
-        - Name: web.zip
+        - Name: !Sub ['v${Version}/web.zip', { Version: !FindInMap [Release, Current, Version] }]
           Key: !Sub ['v${Version}/web.zip', { Version: !FindInMap [Release, Current, Version] }]
           Sha256: !FindInMap [Release, Current, WebSha256]
 
@@ -751,8 +754,12 @@ Resources:
           RequireNumbers: true
           RequireSymbols: false
           TemporaryPasswordValidityDays: 7
+      # Users turn on an authenticator app themselves under Settings (Cognito only allows required MFA at pool creation).
       MfaConfiguration: 'OPTIONAL'
       EnabledMfas: [SOFTWARE_TOKEN_MFA]
+      # That self-service scope also lets users edit their attributes; a new email only counts once verified.
+      UserAttributeUpdateSettings:
+        AttributesRequireVerificationBeforeUpdate: [email]
       AccountRecoverySetting:
         RecoveryMechanisms: [{ Name: verified_email, Priority: 1 }]
       AdminCreateUserConfig:
@@ -777,7 +784,8 @@ Resources:
       GenerateSecret: false
       AllowedOAuthFlowsUserPoolClient: true
       AllowedOAuthFlows: [code]
-      AllowedOAuthScopes: [openid, email, profile]
+      # aws.cognito.signin.user.admin: users set up two-factor authentication with their own access token.
+      AllowedOAuthScopes: [openid, email, profile, aws.cognito.signin.user.admin]
       CallbackURLs: !If
         - HasCustomDomain
         - [!Sub 'https://${CustomDomainName}/auth/callback', !Sub 'https://${Distribution.DomainName}/auth/callback']

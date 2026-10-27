@@ -22,7 +22,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Build release
-        run: npm run release -- --base-url "${{ vars.ARTIFACT_BASE_URL }}/${GITHUB_REF_NAME}"
+        run: npm run release -- --base-url "${{ vars.ARTIFACT_BASE_URL }}"
       - name: Attach to GitHub release
         env:
           GH_TOKEN: ${{ github.token }}

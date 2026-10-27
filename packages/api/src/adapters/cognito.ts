@@ -34,20 +34,29 @@ export class CognitoAuthenticator implements Authenticator {
     const { userPoolId, clientId } = await this.system();
     this.verifier ??= CognitoJwtVerifier.create({ userPoolId, clientId, tokenUse: 'id' });
     try {
-      const claims = await this.verifier.verify(token);
-      const groups = (claims['cognito:groups'] as string[] | undefined) ?? [];
-      const email = typeof claims.email === 'string' ? claims.email.toLowerCase() : '';
-      if (!email) return null;
-      return {
-        sub: claims.sub,
-        username: String(claims['cognito:username'] ?? claims.sub),
-        email,
-        isAdmin: groups.includes(ADMIN_GROUP),
-      };
+      return principalFromClaims(await this.verifier.verify(token));
     } catch {
       return null;
     }
   }
+}
+
+/**
+ * Users can edit their own attributes (the two-factor setup needs that scope), so only a verified
+ * email identifies them. Company (SSO) users carry `identities`; their provider vouches for the email.
+ */
+export function principalFromClaims(claims: Record<string, unknown>): Principal | null {
+  const email = typeof claims.email === 'string' ? claims.email.toLowerCase() : '';
+  if (!email) return null;
+  const federated = claims.identities !== undefined;
+  if (!federated && claims.email_verified !== true && claims.email_verified !== 'true') return null;
+  const groups = (claims['cognito:groups'] as string[] | undefined) ?? [];
+  return {
+    sub: String(claims.sub),
+    username: String(claims['cognito:username'] ?? claims.sub),
+    email,
+    isAdmin: groups.includes(ADMIN_GROUP),
+  };
 }
 
 function attribute(user: UserType, name: string): string | undefined {
