@@ -27,7 +27,8 @@ if (/\/v\d+\.\d+\.\d+[^/]*$/.test(baseUrl)) {
 
 if (!values['skip-build']) execSync('npm run build', { stdio: 'inherit' });
 
-const FIXED_TIME = new Date('2026-01-01T00:00:00Z');
+// Zip entries store local wall-clock time, so a fixed local date gives the same bytes in every time zone.
+const FIXED_TIME = new Date(2026, 0, 1);
 
 /** Deterministic zip: sorted entries, fixed timestamps. */
 function zipDir(dir) {

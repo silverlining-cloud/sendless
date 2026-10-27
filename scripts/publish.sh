@@ -25,6 +25,13 @@ if ! grep -q "Default: ${base}\$" dist/release/sendless.yaml; then
   echo "         rebuild with: npm run release -- --base-url ${base}" >&2
 fi
 
+# Installed stacks pin the checksums of their release, so a published version is never replaced.
+key="${prefix:+$prefix/}v${version}/sendless.yaml"
+if aws s3api head-object --bucket "$bucket" --key "$key" >/dev/null 2>&1; then
+  echo "v${version} is already published in ${bucket}; bump the version in package.json instead." >&2
+  exit 1
+fi
+
 dest="s3://${bucket}/${prefix:+$prefix/}v${version}"
 aws s3 cp dist/release/backend.zip "${dest}/backend.zip" --content-type application/zip
 aws s3 cp dist/release/web.zip "${dest}/web.zip" --content-type application/zip
