@@ -34,4 +34,4 @@ The registration service is intentionally **not** part of this repository: it ho
 
 ## Pricing guidance
 
-Price flat per deployment, not per user; that is the advantage over per-seat SaaS. Keep Community free, and sell Pro through public pricing plus private offers, including channel partner private offers. With the "Deployed on AWS" badge, buyers can pay from their AWS commitment.
+Pro costs a flat USD 1,399 per year per customer, with as many installations as the customer likes; license keys carry no installation limit. Pricing per customer instead of per user is the advantage over per-seat SaaS. Keep Community free, and sell Pro through the public offer plus private offers, including channel partner private offers. With the "Deployed on AWS" badge, buyers can pay from their AWS commitment.
