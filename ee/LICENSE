@@ -1,7 +1,5 @@
 Sendless Enterprise License
 
-DRAFT — to be reviewed by legal counsel before publication.
-
 Copyright (c) 2026 SilverLining.Cloud GmbH
 
 This license applies to all files in the "ee" directory of the Sendless repository
@@ -9,8 +7,9 @@ This license applies to all files in the "ee" directory of the Sendless reposito
 
 1. Subscription required for production use. You may use the Pro Software in production
    only while you hold a valid Sendless Pro license key issued by SilverLining.Cloud GmbH
-   ("Licensor") for the number of deployments and the features you use, and only in
-   accordance with the terms of your subscription.
+   ("Licensor") for the features you use, and only in accordance with the terms of your
+   subscription. A license key may be used in any number of installations operated by or
+   for your organization.
 
 2. Development and testing. Without a subscription you may copy, modify and run the Pro
    Software solely for development, testing and evaluation, and not with production data.

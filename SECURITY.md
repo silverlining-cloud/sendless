@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please email **security@silverlining.cloud** with a description and reproduction steps. Do not open a public issue. We aim to respond within 3 business days and to ship fixes for confirmed issues as a new release with a security advisory.
+Please email **support@silverlining.cloud** with a description and reproduction steps. Do not open a public issue. We aim to respond within 3 business days and to ship fixes for confirmed issues as a new release with a security advisory.
 
 ## Security model (summary)
 
